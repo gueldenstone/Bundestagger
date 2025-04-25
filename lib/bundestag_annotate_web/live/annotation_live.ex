@@ -58,6 +58,27 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   def render(assigns) do
     ~H"""
     <div class="container mx-auto px-4 py-8">
+      <div class="mb-6">
+        <.link
+          navigate={~p"/documents"}
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Back to documents
+        </.link>
+      </div>
+
       <h1 class="text-3xl font-bold mb-8">{@document.title}</h1>
 
       <div class="space-y-6">

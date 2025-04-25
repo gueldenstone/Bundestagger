@@ -18,6 +18,7 @@ defmodule BundestagAnnotateWeb.Router do
     pipe_through :browser
 
     get "/", AnnotationController, :index
+    get "/documents", AnnotationController, :index
     live "/documents/:id", AnnotationLive, :show
   end
 
