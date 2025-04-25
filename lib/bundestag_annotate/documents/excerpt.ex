@@ -2,32 +2,22 @@ defmodule BundestagAnnotate.Documents.Excerpt do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @type t :: %__MODULE__{
-          excerpt_id: String.t(),
-          sentence_before: String.t() | nil,
-          sentence_with_keyword: String.t(),
-          sentence_after: String.t() | nil,
-          document_id: String.t(),
-          category_id: String.t() | nil,
-          inserted_at: DateTime.t(),
-          updated_at: DateTime.t()
-        }
-
-  @primary_key {:excerpt_id, :string, autogenerate: false}
+  @primary_key {:excerpt_id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
   schema "excerpts" do
     field :sentence_before, :string
     field :sentence_with_keyword, :string
     field :sentence_after, :string
 
     belongs_to :document, BundestagAnnotate.Documents.Document,
-      type: :string,
       foreign_key: :document_id,
-      references: :document_id
+      references: :document_id,
+      type: :binary_id
 
     belongs_to :category, BundestagAnnotate.Documents.Category,
-      type: :string,
       foreign_key: :category_id,
-      references: :category_id
+      references: :category_id,
+      type: :binary_id
 
     timestamps()
   end
@@ -36,14 +26,13 @@ defmodule BundestagAnnotate.Documents.Excerpt do
   def changeset(excerpt, attrs) do
     excerpt
     |> cast(attrs, [
-      :excerpt_id,
-      :document_id,
-      :category_id,
       :sentence_before,
       :sentence_with_keyword,
-      :sentence_after
+      :sentence_after,
+      :document_id,
+      :category_id
     ])
-    |> validate_required([:excerpt_id, :document_id, :sentence_with_keyword])
+    |> validate_required([:sentence_with_keyword, :document_id])
     |> foreign_key_constraint(:document_id)
     |> foreign_key_constraint(:category_id)
   end

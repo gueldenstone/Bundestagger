@@ -17,7 +17,8 @@ defmodule BundestagAnnotate.Documents.Document do
           updated_at: DateTime.t() | nil
         }
 
-  @primary_key {:document_id, :string, autogenerate: false}
+  @primary_key {:document_id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
   schema "documents" do
     field :date, :date
     field :title, :string
@@ -36,8 +37,8 @@ defmodule BundestagAnnotate.Documents.Document do
   @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
   def changeset(%__MODULE__{} = document, attrs) do
     document
-    |> cast(attrs, [:document_id, :date, :title, :content])
-    |> validate_required([:document_id, :date, :title, :content])
+    |> cast(attrs, [:date, :title, :content])
+    |> validate_required([:date, :title, :content])
     |> validate_length(:title, min: 1, max: 255)
     |> unique_constraint(:document_id)
   end

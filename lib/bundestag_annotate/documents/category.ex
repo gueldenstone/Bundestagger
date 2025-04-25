@@ -11,11 +11,16 @@ defmodule BundestagAnnotate.Documents.Category do
           updated_at: DateTime.t()
         }
 
-  @primary_key {:category_id, :string, autogenerate: false}
+  @primary_key {:category_id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
   schema "categories" do
     field :name, :string
     field :description, :string
     field :color, :string
+
+    has_many :excerpts, BundestagAnnotate.Documents.Excerpt,
+      foreign_key: :category_id,
+      references: :category_id
 
     timestamps()
   end
