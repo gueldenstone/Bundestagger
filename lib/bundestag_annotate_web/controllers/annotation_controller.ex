@@ -4,7 +4,17 @@ defmodule BundestagAnnotateWeb.AnnotationController do
   alias BundestagAnnotate.{Documents, Categories}
 
   def index(conn, _params) do
-    documents = Documents.list_documents()
+    documents =
+      Documents.list_documents()
+      |> Enum.map(fn document ->
+        excerpts =
+          Documents.list_excerpts_by_document(document.document_id)
+          |> Documents.preload_categories()
+
+        all_categorized = Enum.all?(excerpts, & &1.category)
+        Map.put(document, :all_categorized, all_categorized)
+      end)
+
     render(conn, :index, documents: documents)
   end
 

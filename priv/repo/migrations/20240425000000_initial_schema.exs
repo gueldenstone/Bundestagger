@@ -29,7 +29,7 @@ defmodule BundestagAnnotate.Repo.Migrations.InitialSchema do
     create table(:excerpts, primary_key: false) do
       add :excerpt_id, :binary_id, primary_key: true
       add :document_id, :binary_id, null: false
-      add :category_id, :binary_id, null: false
+      add :category_id, :binary_id
       add :sentence_before, :text
       add :sentence_with_keyword, :text, null: false
       add :sentence_after, :text
@@ -58,7 +58,7 @@ defmodule BundestagAnnotate.Repo.Migrations.InitialSchema do
     BEFORE INSERT ON excerpts
     BEGIN
       SELECT CASE
-        WHEN (SELECT category_id FROM categories WHERE category_id = NEW.category_id) IS NULL
+        WHEN NEW.category_id IS NOT NULL AND (SELECT category_id FROM categories WHERE category_id = NEW.category_id) IS NULL
         THEN RAISE(ABORT, 'foreign key constraint failed')
       END;
     END;

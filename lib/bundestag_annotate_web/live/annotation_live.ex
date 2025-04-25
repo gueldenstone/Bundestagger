@@ -29,8 +29,13 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
          |> assign(:categories, categories)
          |> assign(:open_dropdowns, %{})
          |> assign(:show_new_category_modal, false)
-         |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})}
+         |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})
+         |> assign(:all_categorized, all_excerpts_categorized?(excerpts))}
     end
+  end
+
+  defp all_excerpts_categorized?(excerpts) do
+    Enum.all?(excerpts, & &1.category)
   end
 
   @impl true
@@ -102,7 +107,8 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
         {:noreply,
          socket
          |> assign(:excerpts, excerpts)
-         |> assign(:open_dropdowns, Map.delete(socket.assigns.open_dropdowns, excerpt_id))}
+         |> assign(:open_dropdowns, Map.delete(socket.assigns.open_dropdowns, excerpt_id))
+         |> assign(:all_categorized, all_excerpts_categorized?(excerpts))}
 
       {:error, _changeset} ->
         {:noreply, socket}
@@ -114,7 +120,7 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
     ~H"""
     <div class="container mx-auto px-4 py-8">
       <.back_button />
-      <.document_title document={@document} />
+      <.document_title document={@document} all_categorized={@all_categorized} />
       <.excerpts_list excerpts={@excerpts} categories={@categories} open_dropdowns={@open_dropdowns} />
       <.new_category_modal show={@show_new_category_modal} category={@new_category} />
     </div>

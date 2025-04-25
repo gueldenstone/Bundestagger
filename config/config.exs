@@ -11,6 +11,13 @@ config :bundestag_annotate,
   ecto_repos: [BundestagAnnotate.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Configure SQLite3 adapter
+config :bundestag_annotate, BundestagAnnotate.Repo,
+  pool_size: 5,
+  busy_timeout: 5000,
+  journal_mode: :wal,
+  synchronous: :normal
+
 # Configures the endpoint
 config :bundestag_annotate, BundestagAnnotateWeb.Endpoint,
   url: [host: "localhost"],

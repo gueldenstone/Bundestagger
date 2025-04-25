@@ -11,9 +11,9 @@ defmodule BundestagAnnotate.Application do
       BundestagAnnotateWeb.Telemetry,
       BundestagAnnotate.Repo,
       {Ecto.Migrator,
-        repos: Application.fetch_env!(:bundestag_annotate, :ecto_repos),
-        skip: skip_migrations?()},
-      {DNSCluster, query: Application.get_env(:bundestag_annotate, :dns_cluster_query) || :ignore},
+       repos: Application.fetch_env!(:bundestag_annotate, :ecto_repos), skip: skip_migrations?()},
+      {DNSCluster,
+       query: Application.get_env(:bundestag_annotate, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: BundestagAnnotate.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: BundestagAnnotate.Finch},
@@ -34,6 +34,13 @@ defmodule BundestagAnnotate.Application do
   @impl true
   def config_change(changed, _new, removed) do
     BundestagAnnotateWeb.Endpoint.config_change(changed, removed)
+    :ok
+  end
+
+  @impl true
+  def stop(_state) do
+    # Ensure database connections are properly closed
+    :ok = BundestagAnnotate.Repo.stop()
     :ok
   end
 
