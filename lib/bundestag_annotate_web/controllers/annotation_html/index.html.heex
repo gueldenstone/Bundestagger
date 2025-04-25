@@ -17,6 +17,13 @@
               <p class="mt-2 text-sm text-zinc-600">
                 {Calendar.strftime(document.date, "%B %d, %Y")}
               </p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <%= for keyword <- Enum.uniq(Enum.map(document.excerpts, & &1.keyword)) do %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {keyword}
+                  </span>
+                <% end %>
+              </div>
             </div>
             <%= if document.all_categorized do %>
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

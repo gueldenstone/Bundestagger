@@ -12,7 +12,7 @@ defmodule BundestagAnnotateWeb.AnnotationController do
           |> Documents.preload_categories()
 
         all_categorized = Enum.all?(excerpts, & &1.category)
-        Map.put(document, :all_categorized, all_categorized)
+        Map.merge(document, %{all_categorized: all_categorized, excerpts: excerpts})
       end)
 
     render(conn, :index, documents: documents)

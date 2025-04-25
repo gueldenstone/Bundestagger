@@ -46,23 +46,25 @@ window.liveSocket = liveSocket
 window.addEventListener("phx:js-exec", (e) => {
   const { to, content } = e.detail;
   const container = document.querySelector(to);
-  
+
   if (container) {
-    // Find the paragraph containing the excerpt text
+    // Normalize the content and paragraphs for reliable searching
+    const normalizedContent = content.toLowerCase().trim();
     const paragraphs = container.querySelectorAll("p");
     let targetParagraph = null;
-    
+
     for (const paragraph of paragraphs) {
-      if (paragraph.textContent.includes(content)) {
+      const normalizedParagraphText = paragraph.textContent.toLowerCase().trim();
+      if (normalizedParagraphText.match(new RegExp(`${normalizedContent}`))) {
         targetParagraph = paragraph;
         break;
       }
     }
-    
+
     if (targetParagraph) {
       // Scroll to the paragraph with smooth behavior
       targetParagraph.scrollIntoView({ behavior: "smooth", block: "center" });
-      
+
       // Highlight the paragraph temporarily
       targetParagraph.classList.add("bg-yellow-100");
       setTimeout(() => {

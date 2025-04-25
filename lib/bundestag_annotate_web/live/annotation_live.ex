@@ -25,6 +25,9 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
         # Create a map of excerpt IDs to their content for quick lookup
         excerpt_map = Map.new(excerpts, fn excerpt -> {excerpt.excerpt_id, excerpt} end)
 
+        # Preload excerpts into the document
+        document = Map.put(document, :excerpts, excerpts)
+
         {:ok,
          socket
          |> assign(:document, document)

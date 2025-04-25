@@ -8,6 +8,7 @@ defmodule BundestagAnnotate.Documents.Excerpt do
     field :sentence_before, :string
     field :sentence_with_keyword, :string
     field :sentence_after, :string
+    field :keyword, :string
 
     belongs_to :document, BundestagAnnotate.Documents.Document,
       foreign_key: :document_id,
@@ -29,10 +30,11 @@ defmodule BundestagAnnotate.Documents.Excerpt do
       :sentence_before,
       :sentence_with_keyword,
       :sentence_after,
+      :keyword,
       :document_id,
       :category_id
     ])
-    |> validate_required([:sentence_with_keyword, :document_id])
+    |> validate_required([:sentence_with_keyword, :document_id, :keyword])
     |> foreign_key_constraint(:document_id)
     |> foreign_key_constraint(:category_id)
   end

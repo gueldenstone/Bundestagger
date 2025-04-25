@@ -3,6 +3,7 @@ import Config
 # Configure your database
 config :bundestag_annotate, BundestagAnnotate.Repo,
   database: Path.expand("../bundestag_annotate_dev.db", __DIR__),
+  # database: Path.expand("../rassismus.db", __DIR__),
   pool_size: 5,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true
