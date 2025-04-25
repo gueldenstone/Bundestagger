@@ -5,13 +5,89 @@ defmodule BundestagAnnotate.Documents do
 
   use BundestagAnnotate.BaseContext
   alias BundestagAnnotate.Documents.{Document, Excerpt}
+  import Ecto.Query
+  alias BundestagAnnotate.Repo
 
   # Document functions
   @doc """
-  Returns the list of documents.
+  Returns a paginated list of documents with optional filtering and sorting.
   """
-  @spec list_documents() :: [Document.t()]
-  def list_documents, do: list(Document)
+  @spec list_documents(map()) :: {[Document.t()], integer()}
+  def list_documents(opts \\ []) do
+    page = Keyword.get(opts, :page, 1)
+    per_page = Keyword.get(opts, :per_page, 10)
+    sort_order = Keyword.get(opts, :sort_order, "desc")
+    has_excerpts = Keyword.get(opts, :has_excerpts, true)
+    offset = (page - 1) * per_page
+
+    IO.puts("list_documents - sort_order: #{sort_order}")
+
+    # Base query
+    base_query =
+      from d in Document,
+        left_join: e in assoc(d, :excerpts)
+
+    # Apply sorting
+    base_query =
+      case sort_order do
+        "asc" ->
+          from [d, _] in base_query, order_by: [asc: d.date]
+
+        "categorized" ->
+          from [d, e] in base_query,
+            group_by: d.document_id,
+            order_by: [desc: count(e.category_id)]
+
+        "uncategorized" ->
+          from [d, e] in base_query,
+            group_by: d.document_id,
+            order_by: [asc: count(e.category_id)]
+
+        _ ->
+          from [d, _] in base_query, order_by: [desc: d.date]
+      end
+
+    # Apply filters
+    base_query =
+      if has_excerpts do
+        from [d, e] in base_query,
+          group_by: d.document_id,
+          having: count(e.excerpt_id) > 0
+      else
+        from [d, _] in base_query,
+          group_by: d.document_id
+      end
+
+    # Get total count
+    total_count =
+      base_query
+      |> select([d], d.document_id)
+      |> Repo.all()
+      |> length()
+
+    # Get paginated document IDs
+    document_ids =
+      base_query
+      |> select([d], d.document_id)
+      |> limit(^per_page)
+      |> offset(^offset)
+      |> Repo.all()
+
+    # Get full documents with excerpts
+    documents =
+      from(d in Document,
+        where: d.document_id in ^document_ids,
+        preload: [:excerpts]
+      )
+      |> Repo.all()
+      |> Enum.sort_by(fn doc -> Enum.find_index(document_ids, &(&1 == doc.document_id)) end)
+
+    # Log the first few dates to verify sorting
+    dates = Enum.map(documents, & &1.date)
+    IO.puts("First 3 dates: #{inspect(Enum.take(dates, 3))}")
+
+    {documents, total_count}
+  end
 
   @doc """
   Gets a single document by its ID.
@@ -25,7 +101,10 @@ defmodule BundestagAnnotate.Documents do
   Raises `Ecto.NoResultsError` if the document does not exist.
   """
   @spec get_document!(String.t()) :: Document.t() | no_return()
-  def get_document!(document_id), do: get!(Document, document_id)
+  def get_document!(document_id) do
+    Repo.get!(Document, document_id)
+    |> Repo.preload(:excerpts)
+  end
 
   @doc """
   Creates a document.

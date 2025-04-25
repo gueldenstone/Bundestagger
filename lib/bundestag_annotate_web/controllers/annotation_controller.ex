@@ -3,19 +3,18 @@ defmodule BundestagAnnotateWeb.AnnotationController do
 
   alias BundestagAnnotate.{Documents, Categories}
 
-  def index(conn, _params) do
-    documents =
-      Documents.list_documents()
-      |> Enum.map(fn document ->
-        excerpts =
-          Documents.list_excerpts_by_document(document.document_id)
-          |> Documents.preload_categories()
+  def index(conn, params) do
+    {documents, total_count} = Documents.list_documents(params)
 
-        all_categorized = Enum.all?(excerpts, & &1.category)
-        Map.merge(document, %{all_categorized: all_categorized, excerpts: excerpts})
-      end)
-
-    render(conn, :index, documents: documents)
+    render(conn, :index,
+      documents: documents,
+      total_count: total_count,
+      page: String.to_integer(Map.get(params, "page", "1")),
+      per_page: String.to_integer(Map.get(params, "per_page", "10")),
+      sort_by: Map.get(params, "sort_by", "date"),
+      sort_order: Map.get(params, "sort_order", "desc"),
+      has_excerpts: Map.get(params, "has_excerpts", "true")
+    )
   end
 
   def show(conn, %{"id" => document_id}) do

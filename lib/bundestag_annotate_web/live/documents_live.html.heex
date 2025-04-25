@@ -1,0 +1,148 @@
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <.header>
+    Documents
+    <:subtitle>Select a document to view its excerpts</:subtitle>
+  </.header>
+
+  <div class="mt-8">
+    <div class="mb-6 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-2">
+          <label for="sort_order" class="text-sm font-medium text-gray-700">Sort by date:</label>
+          <select
+            id="sort_order"
+            name="sort_order"
+            class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            phx-click="update_sort"
+          >
+            <option value="desc" selected={@sort_order == "desc"}>Newest first</option>
+            <option value="asc" selected={@sort_order == "asc"}>Oldest first</option>
+            <option value="categorized" selected={@sort_order == "categorized"}>
+              Categorized first
+            </option>
+            <option value="uncategorized" selected={@sort_order == "uncategorized"}>
+              Uncategorized first
+            </option>
+          </select>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <label for="has_excerpts" class="text-sm font-medium text-gray-700">Filter:</label>
+          <select
+            id="has_excerpts"
+            name="has_excerpts"
+            class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            phx-change="update_filter"
+          >
+            <option value="true" selected={@has_excerpts == "true"}>With Excerpts</option>
+            <option value="false" selected={@has_excerpts == "false"}>All Documents</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <span class="text-sm text-gray-700">
+          Showing {(@page - 1) * @per_page + 1}-{min(@page * @per_page, @total_count)} of {@total_count}
+        </span>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <%= for document <- @documents do %>
+        <.link
+          navigate={~p"/documents/#{document.document_id}"}
+          class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-semibold text-zinc-800">{document.title}</h2>
+              <p class="mt-2 text-sm text-zinc-600">
+                {Calendar.strftime(document.date, "%B %d, %Y")}
+              </p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <%= for keyword <- Enum.uniq(Enum.map(document.excerpts, & &1.keyword)) do %>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {keyword}
+                  </span>
+                <% end %>
+              </div>
+            </div>
+            <%= if Enum.all?(document.excerpts, & &1.category_id != nil) do %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                All categorized
+              </span>
+            <% else %>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-1"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                Needs categorization
+              </span>
+            <% end %>
+          </div>
+        </.link>
+      <% end %>
+    </div>
+
+    <div class="mt-8 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-sm text-gray-700">Items per page:</span>
+        <select
+          name="per_page"
+          class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          phx-change="update_per_page"
+        >
+          <option value="10" selected={@per_page == 10}>10</option>
+          <option value="25" selected={@per_page == 25}>25</option>
+          <option value="50" selected={@per_page == 50}>50</option>
+          <option value="100" selected={@per_page == 100}>100</option>
+        </select>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <%= if @page > 1 do %>
+          <.link
+            navigate={
+              ~p"/documents?#{build_query_params(@page - 1, @per_page, @sort_order, @has_excerpts)}"
+            }
+            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Previous
+          </.link>
+        <% end %>
+
+        <%= if @page * @per_page < @total_count do %>
+          <.link
+            navigate={
+              ~p"/documents?#{build_query_params(@page + 1, @per_page, @sort_order, @has_excerpts)}"
+            }
+            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Next
+          </.link>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
