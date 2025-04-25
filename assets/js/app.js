@@ -42,3 +42,33 @@ liveSocket.connect()
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
 
+// Handle jumping to text in document content
+window.addEventListener("phx:js-exec", (e) => {
+  const { to, content } = e.detail;
+  const container = document.querySelector(to);
+  
+  if (container) {
+    // Find the paragraph containing the excerpt text
+    const paragraphs = container.querySelectorAll("p");
+    let targetParagraph = null;
+    
+    for (const paragraph of paragraphs) {
+      if (paragraph.textContent.includes(content)) {
+        targetParagraph = paragraph;
+        break;
+      }
+    }
+    
+    if (targetParagraph) {
+      // Scroll to the paragraph with smooth behavior
+      targetParagraph.scrollIntoView({ behavior: "smooth", block: "center" });
+      
+      // Highlight the paragraph temporarily
+      targetParagraph.classList.add("bg-yellow-100");
+      setTimeout(() => {
+        targetParagraph.classList.remove("bg-yellow-100");
+      }, 2000);
+    }
+  }
+});
+

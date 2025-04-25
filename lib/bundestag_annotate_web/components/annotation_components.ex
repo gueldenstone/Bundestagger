@@ -92,8 +92,27 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
         <.excerpt_content excerpt={@excerpt} />
         <.excerpt_category excerpt={@excerpt} />
       </div>
-      <div class="mt-4">
+      <div class="mt-4 flex gap-2">
         <.category_dropdown excerpt={@excerpt} categories={@categories} is_open={@is_dropdown_open} />
+        <button
+          phx-click="jump_to_text"
+          phx-value-excerpt-id={@excerpt.excerpt_id}
+          class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 mr-1"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Jump to Text
+        </button>
       </div>
     </div>
     """
@@ -303,8 +322,10 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
         </svg>
       </button>
       <div class={"mt-4 bg-white rounded-lg shadow p-6 #{if @is_expanded, do: "block", else: "hidden"}"}>
-        <div class="prose max-w-none">
-          {@content}
+        <div class="prose max-w-none" id="document-content">
+          <%= for {paragraph, index} <- Enum.with_index(String.split(@content, "\n")) do %>
+            <p id={"paragraph-#{index}"} class="mb-4">{paragraph}</p>
+          <% end %>
         </div>
       </div>
     </div>

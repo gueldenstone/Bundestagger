@@ -22,6 +22,9 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
 
         categories = Categories.list_categories()
 
+        # Create a map of excerpt IDs to their content for quick lookup
+        excerpt_map = Map.new(excerpts, fn excerpt -> {excerpt.excerpt_id, excerpt} end)
+
         {:ok,
          socket
          |> assign(:document, document)
@@ -31,7 +34,8 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
          |> assign(:show_new_category_modal, false)
          |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})
          |> assign(:all_categorized, all_excerpts_categorized?(excerpts))
-         |> assign(:document_content_expanded, false)}
+         |> assign(:document_content_expanded, false)
+         |> assign(:excerpt_map, excerpt_map)}
     end
   end
 
@@ -120,6 +124,24 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   def handle_event("toggle_document_content", _params, socket) do
     {:noreply,
      assign(socket, :document_content_expanded, !socket.assigns.document_content_expanded)}
+  end
+
+  @impl true
+  def handle_event("jump_to_text", %{"excerpt-id" => excerpt_id}, socket) do
+    excerpt = socket.assigns.excerpt_map[excerpt_id]
+
+    # First ensure the document content is expanded
+    socket = assign(socket, :document_content_expanded, true)
+
+    # Push a JavaScript event to handle the scrolling
+    {:noreply,
+     socket
+     |> push_event("js-exec", %{
+       to: "#document-content",
+       attr: "data-excerpt-id",
+       val: excerpt_id,
+       content: excerpt.sentence_with_keyword
+     })}
   end
 
   @impl true
