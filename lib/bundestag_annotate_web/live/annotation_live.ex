@@ -30,7 +30,8 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
          |> assign(:open_dropdowns, %{})
          |> assign(:show_new_category_modal, false)
          |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})
-         |> assign(:all_categorized, all_excerpts_categorized?(excerpts))}
+         |> assign(:all_categorized, all_excerpts_categorized?(excerpts))
+         |> assign(:document_content_expanded, false)}
     end
   end
 
@@ -116,12 +117,19 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   end
 
   @impl true
+  def handle_event("toggle_document_content", _params, socket) do
+    {:noreply,
+     assign(socket, :document_content_expanded, !socket.assigns.document_content_expanded)}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="container mx-auto px-4 py-8">
       <.back_button />
       <.document_title document={@document} all_categorized={@all_categorized} />
       <.excerpts_list excerpts={@excerpts} categories={@categories} open_dropdowns={@open_dropdowns} />
+      <.document_content content={@document.content} is_expanded={@document_content_expanded} />
       <.new_category_modal show={@show_new_category_modal} category={@new_category} />
     </div>
     """
