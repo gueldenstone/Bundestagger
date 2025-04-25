@@ -1,0 +1,39 @@
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <.header>
+    {@document.title}
+    <:subtitle>{Calendar.strftime(@document.date, "%B %d, %Y")}</:subtitle>
+    <:actions>
+      <.link navigate={~p"/"} class="text-sm font-semibold leading-6 text-zinc-900">
+        Back to documents
+      </.link>
+    </:actions>
+  </.header>
+
+  <div class="mt-8">
+    <div class="prose max-w-none">
+      <h3 class="text-lg font-semibold text-zinc-800 mb-4">Full Content</h3>
+      <p class="whitespace-pre-wrap">{@document.content}</p>
+    </div>
+
+    <div class="mt-12">
+      <h3 class="text-lg font-semibold text-zinc-800 mb-4">Excerpts</h3>
+      <div class="space-y-6">
+        <%= for excerpt <- @excerpts do %>
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="space-y-4">
+              <p :if={excerpt.sentence_before} class="text-zinc-600">
+                {excerpt.sentence_before}
+              </p>
+              <p class="font-medium text-zinc-900">
+                {excerpt.sentence_with_keyword}
+              </p>
+              <p :if={excerpt.sentence_after} class="text-zinc-600">
+                {excerpt.sentence_after}
+              </p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

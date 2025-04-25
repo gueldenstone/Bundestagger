@@ -17,7 +17,8 @@ defmodule BundestagAnnotateWeb.Router do
   scope "/", BundestagAnnotateWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/", AnnotationController, :index
+    get "/documents/:id", AnnotationController, :show
   end
 
   # Other scopes may use custom stacks.

@@ -1,0 +1,22 @@
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <.header>
+    Documents
+    <:subtitle>Select a document to view its excerpts</:subtitle>
+  </.header>
+
+  <div class="mt-8">
+    <div class="space-y-4">
+      <%= for document <- @documents do %>
+        <.link
+          navigate={~p"/documents/#{document.document_id}"}
+          class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+        >
+          <h2 class="text-xl font-semibold text-zinc-800">{document.title}</h2>
+          <p class="mt-2 text-sm text-zinc-600">
+            {Calendar.strftime(document.date, "%B %d, %Y")}
+          </p>
+        </.link>
+      <% end %>
+    </div>
+  </div>
+</div>
