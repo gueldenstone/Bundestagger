@@ -13,6 +13,11 @@ defmodule BundestagAnnotate.Documents.Excerpt do
       foreign_key: :document_id,
       references: :document_id
 
+    belongs_to :category, BundestagAnnotate.Documents.Category,
+      type: :string,
+      foreign_key: :category_id,
+      references: :category_id
+
     timestamps()
   end
 
@@ -22,11 +27,13 @@ defmodule BundestagAnnotate.Documents.Excerpt do
     |> cast(attrs, [
       :excerpt_id,
       :document_id,
+      :category_id,
       :sentence_before,
       :sentence_with_keyword,
       :sentence_after
     ])
     |> validate_required([:excerpt_id, :document_id, :sentence_with_keyword])
     |> foreign_key_constraint(:document_id)
+    |> foreign_key_constraint(:category_id)
   end
 end

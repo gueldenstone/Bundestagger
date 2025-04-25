@@ -1,7 +1,31 @@
 defmodule BundestagAnnotate.Documents do
   import Ecto.Query, warn: false
   alias BundestagAnnotate.Repo
-  alias BundestagAnnotate.Documents.{Document, Excerpt}
+  alias BundestagAnnotate.Documents.{Document, Excerpt, Category}
+
+  # Category functions
+  def list_categories do
+    Repo.all(Category)
+  end
+
+  def get_category(category_id), do: Repo.get(Category, category_id)
+  def get_category!(category_id), do: Repo.get!(Category, category_id)
+
+  def create_category(attrs \\ %{}) do
+    %Category{}
+    |> Category.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_category(%Category{} = category, attrs) do
+    category
+    |> Category.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_category(%Category{} = category) do
+    Repo.delete(category)
+  end
 
   # Document functions
   def list_documents do
@@ -54,5 +78,13 @@ defmodule BundestagAnnotate.Documents do
 
   def delete_excerpt(%Excerpt{} = excerpt) do
     Repo.delete(excerpt)
+  end
+
+  def preload_categories(excerpts) when is_list(excerpts) do
+    Repo.preload(excerpts, :category)
+  end
+
+  def preload_categories(excerpt) do
+    Repo.preload(excerpt, :category)
   end
 end

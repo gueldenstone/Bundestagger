@@ -12,6 +12,45 @@
 
 alias BundestagAnnotate.Documents
 
+# Create sample categories
+categories = [
+  %{
+    category_id: "cat-1",
+    name: "Climate Change",
+    description: "Discussions about environmental policies, carbon emissions, and climate action",
+    # emerald-500
+    color: "#10B981"
+  },
+  %{
+    category_id: "cat-2",
+    name: "Education",
+    description: "Topics related to schools, universities, and educational policies",
+    # blue-500
+    color: "#3B82F6"
+  },
+  %{
+    category_id: "cat-3",
+    name: "Economy",
+    description: "Discussions about budget, taxes, and economic policies",
+    # amber-500
+    color: "#F59E0B"
+  },
+  %{
+    category_id: "cat-4",
+    name: "Healthcare",
+    description: "Topics related to health policies, hospitals, and medical care",
+    # red-500
+    color: "#EF4444"
+  }
+]
+
+for category <- categories do
+  case Documents.get_category(category.category_id) do
+    nil -> Documents.create_category(category)
+    _ -> :ok
+  end
+end
+
 # Create a sample document if it doesn't exist
 document =
   case Documents.get_document("doc-1") do

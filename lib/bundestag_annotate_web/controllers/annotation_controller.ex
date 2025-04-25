@@ -9,8 +9,23 @@ defmodule BundestagAnnotateWeb.AnnotationController do
   end
 
   def show(conn, %{"id" => document_id}) do
-    document = Documents.get_document!(document_id)
-    excerpts = Documents.list_excerpts_by_document(document_id)
-    render(conn, :show, document: document, excerpts: excerpts)
+    redirect(conn, to: ~p"/documents/#{document_id}")
+  end
+
+  def select_category(conn, %{"excerpt-id" => excerpt_id, "category-id" => category_id}) do
+    excerpt = Documents.get_excerpt!(excerpt_id)
+    category = Documents.get_category!(category_id)
+
+    case Documents.update_excerpt(excerpt, %{category_id: category.category_id}) do
+      {:ok, _excerpt} ->
+        conn
+        |> put_flash(:info, "Category selected successfully")
+        |> redirect(to: ~p"/documents/#{excerpt.document_id}")
+
+      {:error, _changeset} ->
+        conn
+        |> put_flash(:error, "Failed to select category")
+        |> redirect(to: ~p"/documents/#{excerpt.document_id}")
+    end
   end
 end
