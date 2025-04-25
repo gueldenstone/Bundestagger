@@ -1,7 +1,7 @@
 defmodule BundestagAnnotateWeb.AnnotationController do
   use BundestagAnnotateWeb, :controller
 
-  alias BundestagAnnotate.Documents
+  alias BundestagAnnotate.{Documents, Categories}
 
   def index(conn, _params) do
     documents = Documents.list_documents()
@@ -14,7 +14,7 @@ defmodule BundestagAnnotateWeb.AnnotationController do
 
   def select_category(conn, %{"excerpt-id" => excerpt_id, "category-id" => category_id}) do
     excerpt = Documents.get_excerpt!(excerpt_id)
-    category = Documents.get_category!(category_id)
+    category = Categories.get_category!(category_id)
 
     case Documents.update_excerpt(excerpt, %{category_id: category.category_id}) do
       {:ok, _excerpt} ->
