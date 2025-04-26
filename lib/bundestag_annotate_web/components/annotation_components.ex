@@ -99,29 +99,8 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
       <div class="mt-4">
         <.excerpt_content excerpt={@excerpt} />
       </div>
-      <div class="mt-4 flex gap-2">
-        <div class="flex-1">
-          <.category_dropdown excerpt={@excerpt} categories={@categories} is_open={@is_dropdown_open} />
-        </div>
-        <button
-          phx-click="jump_to_text"
-          phx-value-excerpt-id={@excerpt.excerpt_id}
-          class="inline-flex items-center justify-center p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
-          title="Jump to Text"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
+      <div class="mt-4">
+        <.category_dropdown excerpt={@excerpt} categories={@categories} is_open={@is_dropdown_open} />
       </div>
     </div>
     """
@@ -301,38 +280,6 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def document_content(assigns) do
-    ~H"""
-    <div class="mt-8">
-      <button
-        phx-click="toggle_document_content"
-        class="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-      >
-        <span class="font-medium text-gray-900">View Full Document Content</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class={"h-5 w-5 text-gray-500 transform transition-transform #{if @is_expanded, do: "rotate-180", else: ""}"}
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-            clip-rule="evenodd"
-          />
-        </svg>
-      </button>
-      <div class={"mt-4 bg-white rounded-lg shadow p-6 #{if @is_expanded, do: "block", else: "hidden"}"}>
-        <div class="prose max-w-none" id="document-content">
-          <%= for {paragraph, index} <- Enum.with_index(String.split(@content, "\n")) do %>
-            <p id={"paragraph-#{index}"} class="mb-4">{paragraph}</p>
-          <% end %>
         </div>
       </div>
     </div>

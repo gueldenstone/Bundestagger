@@ -80,7 +80,6 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
     |> assign(:show_new_category_modal, false)
     |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})
     |> assign(:all_categorized, all_excerpts_categorized?(excerpts))
-    |> assign(:document_content_expanded, false)
     |> assign(:excerpt_map, excerpt_map)
     |> assign(:state, state)
   end
@@ -215,41 +214,12 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   end
 
   @impl true
-  def handle_event("toggle_document_content", _params, socket) do
-    {:noreply,
-     assign(socket, :document_content_expanded, !socket.assigns.document_content_expanded)}
-  end
-
-  @impl true
-  def handle_event("jump_to_text", %{"excerpt-id" => excerpt_id}, socket) do
-    case Map.fetch(socket.assigns.excerpt_map, excerpt_id) do
-      {:ok, excerpt} ->
-        socket = assign(socket, :document_content_expanded, true)
-
-        {:noreply,
-         socket
-         |> push_event("js-exec", %{
-           to: "#document-content",
-           attr: "data-excerpt-id",
-           val: excerpt_id,
-           content: excerpt.sentence_with_keyword
-         })}
-
-      :error ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to find excerpt")}
-    end
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-7xl mx-auto px-4 py-8">
       <.back_button state={@state} />
       <.document_title document={@document} all_categorized={@all_categorized} />
       <.excerpts_list excerpts={@excerpts} categories={@categories} open_dropdowns={@open_dropdowns} />
-      <.document_content content={@document.content} is_expanded={@document_content_expanded} />
       <.new_category_modal show={@show_new_category_modal} category={@new_category} />
     </div>
     """
