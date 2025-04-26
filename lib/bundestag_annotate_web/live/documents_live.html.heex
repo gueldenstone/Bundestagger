@@ -64,7 +64,7 @@
             id="has_excerpts"
             name="has_excerpts"
             class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            phx-change="update_filter"
+            phx-click="update_filter"
           >
             <option value="true" selected={@has_excerpts == "true"}>With Excerpts</option>
             <option value="false" selected={@has_excerpts == "false"}>All Documents</option>
@@ -77,7 +77,7 @@
         <select
           name="per_page"
           class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          phx-change="update_per_page"
+          phx-click="update_per_page"
         >
           <option value="10" selected={@per_page == 10}>10</option>
           <option value="25" selected={@per_page == 25}>25</option>

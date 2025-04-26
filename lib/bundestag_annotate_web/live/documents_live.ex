@@ -4,6 +4,15 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    socket =
+      socket
+      |> assign(:page, 1)
+      |> assign(:per_page, 10)
+      |> assign(:sort_order, "desc")
+      |> assign(:has_excerpts, "true")
+      |> assign(:documents, [])
+      |> assign(:total_count, 0)
+
     {:ok, socket}
   end
 
@@ -16,7 +25,8 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
           if String.contains?(key, "=") do
             URI.decode_query(key)
           else
-            params
+            # If it's a single key without =, treat it as a parameter name with empty value
+            %{key => ""}
           end
 
         _ ->
@@ -24,10 +34,10 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
       end
 
     # Extract individual parameters from the query string with defaults
-    page = parse_integer_param(parsed_params["page"], socket.assigns[:page] || 1)
-    per_page = parse_integer_param(parsed_params["per_page"], socket.assigns[:per_page] || 10)
-    sort_order = parsed_params["sort_order"] || socket.assigns[:sort_order] || "desc"
-    has_excerpts = parsed_params["has_excerpts"] || socket.assigns[:has_excerpts] || "true"
+    page = parse_integer_param(parsed_params["page"], 1)
+    per_page = parse_integer_param(parsed_params["per_page"], 10)
+    sort_order = parsed_params["sort_order"] || "desc"
+    has_excerpts = parsed_params["has_excerpts"] || "true"
 
     # Update socket assigns
     socket =
@@ -95,7 +105,7 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
   end
 
   @impl true
-  def handle_event("update_filter", %{"has_excerpts" => has_excerpts}, socket) do
+  def handle_event("update_filter", %{"value" => has_excerpts}, socket) do
     socket =
       socket
       |> assign(:has_excerpts, has_excerpts)
@@ -110,15 +120,17 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
   end
 
   @impl true
-  def handle_event("update_per_page", %{"per_page" => per_page}, socket) do
+  def handle_event("update_per_page", %{"value" => per_page}, socket) do
     case Integer.parse(per_page) do
       {int, _} ->
-        socket =
-          socket
-          |> assign(:per_page, int)
-          |> assign(:page, 1)
-          |> assign_documents()
+        # Update the socket assigns first
+        socket = assign(socket, :per_page, int)
+        socket = assign(socket, :page, 1)
 
+        # Then update the documents with the new per_page
+        socket = assign_documents(socket)
+
+        # Finally, push the patch to update the URL
         {:noreply,
          push_patch(socket,
            to:
@@ -160,6 +172,10 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
       "has_excerpts" => has_excerpts
     }
 
-    URI.encode_query(params)
+    # Remove any empty values and encode the query
+    params
+    |> Enum.reject(fn {_, v} -> v == "" end)
+    |> Map.new()
+    |> URI.encode_query()
   end
 end

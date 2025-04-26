@@ -25,7 +25,7 @@ defmodule BundestagAnnotate.Documents do
       has_excerpts = Keyword.get(opts, :has_excerpts, true)
       offset = (page - 1) * per_page
 
-      # Base query
+      # Base query for documents with excerpts
       base_query =
         from d in Document,
           left_join: e in assoc(d, :excerpts)
@@ -50,28 +50,36 @@ defmodule BundestagAnnotate.Documents do
             from [d, _] in base_query, order_by: [desc: d.date]
         end
 
-      # Apply filters
-      base_query =
+      # Get total count first
+      total_count_query =
         if has_excerpts do
           from [d, e] in base_query,
-            group_by: d.document_id,
-            having: count(e.excerpt_id) > 0
+            where: not is_nil(e.excerpt_id),
+            select: d.document_id
         else
           from [d, _] in base_query,
-            group_by: d.document_id
+            select: d.document_id
         end
 
-      # Get total count
       total_count =
-        base_query
-        |> select([d], d.document_id)
+        total_count_query
         |> Repo.all()
+        |> Enum.uniq()
         |> length()
 
       # Get paginated documents with their excerpts
+      documents_query =
+        if has_excerpts do
+          from [d, e] in base_query,
+            where: not is_nil(e.excerpt_id),
+            select: d
+        else
+          from [d, _] in base_query,
+            select: d
+        end
+
       documents =
-        base_query
-        |> select([d], d)
+        documents_query
         |> limit(^per_page)
         |> offset(^offset)
         |> Repo.all()
