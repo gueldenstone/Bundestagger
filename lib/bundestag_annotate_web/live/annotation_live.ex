@@ -150,7 +150,7 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="container mx-auto px-4 py-8">
+    <div class="max-w-7xl mx-auto px-4 py-8">
       <.back_button />
       <.document_title document={@document} all_categorized={@all_categorized} />
       <.excerpts_list excerpts={@excerpts} categories={@categories} open_dropdowns={@open_dropdowns} />

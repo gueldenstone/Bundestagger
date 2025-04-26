@@ -10,83 +10,82 @@ defmodule BundestagAnnotate.Documents do
 
   # Document functions
   @doc """
-  Returns a paginated list of documents with optional filtering and sorting.
+
+  Returns a list of documents. When options are provided, returns a tuple with pagination info.
   """
+  @spec list_documents() :: [Document.t()]
   @spec list_documents(map()) :: {[Document.t()], integer()}
   def list_documents(opts \\ []) do
-    page = Keyword.get(opts, :page, 1)
-    per_page = Keyword.get(opts, :per_page, 10)
-    sort_order = Keyword.get(opts, :sort_order, "desc")
-    has_excerpts = Keyword.get(opts, :has_excerpts, true)
-    offset = (page - 1) * per_page
+    if opts == [] do
+      Repo.all(Document)
+      |> Repo.preload(:excerpts)
+    else
+      page = Keyword.get(opts, :page, 1)
+      per_page = Keyword.get(opts, :per_page, 10)
+      sort_order = Keyword.get(opts, :sort_order, "desc")
+      has_excerpts = Keyword.get(opts, :has_excerpts, true)
+      offset = (page - 1) * per_page
 
-    IO.puts("list_documents - sort_order: #{sort_order}")
+      IO.puts("list_documents - page: #{page}, per_page: #{per_page}, offset: #{offset}")
 
-    # Base query
-    base_query =
-      from d in Document,
-        left_join: e in assoc(d, :excerpts)
+      # Base query
+      base_query =
+        from d in Document,
+          left_join: e in assoc(d, :excerpts)
 
-    # Apply sorting
-    base_query =
-      case sort_order do
-        "asc" ->
-          from [d, _] in base_query, order_by: [asc: d.date]
+      # Apply sorting
+      base_query =
+        case sort_order do
+          "asc" ->
+            from [d, _] in base_query, order_by: [asc: d.date]
 
-        "categorized" ->
+          "categorized" ->
+            from [d, e] in base_query,
+              group_by: d.document_id,
+              order_by: [desc: count(e.category_id)]
+
+          "uncategorized" ->
+            from [d, e] in base_query,
+              group_by: d.document_id,
+              order_by: [asc: count(e.category_id)]
+
+          _ ->
+            from [d, _] in base_query, order_by: [desc: d.date]
+        end
+
+      # Apply filters
+      base_query =
+        if has_excerpts do
           from [d, e] in base_query,
             group_by: d.document_id,
-            order_by: [desc: count(e.category_id)]
+            having: count(e.excerpt_id) > 0
+        else
+          from [d, _] in base_query,
+            group_by: d.document_id
+        end
 
-        "uncategorized" ->
-          from [d, e] in base_query,
-            group_by: d.document_id,
-            order_by: [asc: count(e.category_id)]
+      # Get total count
+      total_count =
+        base_query
+        |> select([d], d.document_id)
+        |> Repo.all()
+        |> length()
 
-        _ ->
-          from [d, _] in base_query, order_by: [desc: d.date]
-      end
+      # Get paginated documents with their excerpts
+      documents =
+        base_query
+        |> select([d], d)
+        |> limit(^per_page)
+        |> offset(^offset)
+        |> Repo.all()
+        |> Repo.preload(:excerpts)
 
-    # Apply filters
-    base_query =
-      if has_excerpts do
-        from [d, e] in base_query,
-          group_by: d.document_id,
-          having: count(e.excerpt_id) > 0
-      else
-        from [d, _] in base_query,
-          group_by: d.document_id
-      end
+      # Log the first few dates to verify sorting
+      dates = Enum.map(documents, & &1.date)
+      IO.puts("First 3 dates: #{inspect(Enum.take(dates, 3))}")
 
-    # Get total count
-    total_count =
-      base_query
-      |> select([d], d.document_id)
-      |> Repo.all()
-      |> length()
-
-    # Get paginated document IDs
-    document_ids =
-      base_query
-      |> select([d], d.document_id)
-      |> limit(^per_page)
-      |> offset(^offset)
-      |> Repo.all()
-
-    # Get full documents with excerpts
-    documents =
-      from(d in Document,
-        where: d.document_id in ^document_ids,
-        preload: [:excerpts]
-      )
-      |> Repo.all()
-      |> Enum.sort_by(fn doc -> Enum.find_index(document_ids, &(&1 == doc.document_id)) end)
-
-    # Log the first few dates to verify sorting
-    dates = Enum.map(documents, & &1.date)
-    IO.puts("First 3 dates: #{inspect(Enum.take(dates, 3))}")
-
-    {documents, total_count}
+      {documents, total_count}
+    end
   end
 
   @doc """

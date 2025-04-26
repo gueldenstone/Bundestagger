@@ -12,11 +12,15 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
     IO.puts("=== Handle Params ===")
     IO.puts("Params: #{inspect(params)}")
 
-    # Parse the query string if it exists
+    # Parse the query string if it comes as a key
     parsed_params =
-      case params do
-        %{"" => query_string} when is_binary(query_string) ->
-          URI.decode_query(query_string)
+      case Map.keys(params) do
+        [key] when is_binary(key) ->
+          if String.contains?(key, "=") do
+            URI.decode_query(key)
+          else
+            params
+          end
 
         _ ->
           params
@@ -25,12 +29,24 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
     IO.puts("Parsed params: #{inspect(parsed_params)}")
 
     # Extract individual parameters from the query string
-    page = String.to_integer(parsed_params["page"] || "1")
-    per_page = String.to_integer(parsed_params["per_page"] || "10")
-    sort_order = parsed_params["sort_order"] || socket.assigns[:sort_order] || "desc"
-    has_excerpts = parsed_params["has_excerpts"] || "true"
+    page =
+      case parsed_params["page"] do
+        nil -> socket.assigns[:page] || 1
+        page_str when is_binary(page_str) -> String.to_integer(page_str)
+        page when is_integer(page) -> page
+      end
 
-    IO.puts("New sort_order: #{sort_order}")
+    per_page =
+      case parsed_params["per_page"] do
+        nil -> socket.assigns[:per_page] || 10
+        per_page_str when is_binary(per_page_str) -> String.to_integer(per_page_str)
+        per_page when is_integer(per_page) -> per_page
+      end
+
+    sort_order = parsed_params["sort_order"] || socket.assigns[:sort_order] || "desc"
+    has_excerpts = parsed_params["has_excerpts"] || socket.assigns[:has_excerpts] || "true"
+
+    IO.puts("New page: #{page}, sort_order: #{sort_order}")
 
     socket =
       socket
@@ -50,7 +66,7 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
       has_excerpts: has_excerpts
     } = socket.assigns
 
-    IO.puts("assign_documents - sort_order: #{sort_order}")
+    IO.puts("assign_documents - page: #{page}, sort_order: #{sort_order}")
 
     {documents, total_count} =
       Documents.list_documents(
@@ -109,6 +125,13 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
   def handle_event("change_page", %{"page" => page}, socket) do
     page = String.to_integer(page)
 
+    # Update the socket assigns first
+    socket = assign(socket, :page, page)
+
+    # Then update the documents with the new page
+    socket = assign_documents(socket)
+
+    # Finally, push the patch to update the URL
     {:noreply,
      push_patch(socket,
        to:
@@ -117,12 +140,13 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
   end
 
   defp build_query_params(page, per_page, sort_order, has_excerpts) do
-    %{
-      "page" => page,
-      "per_page" => per_page,
+    params = %{
+      "page" => to_string(page),
+      "per_page" => to_string(per_page),
       "sort_order" => sort_order,
       "has_excerpts" => has_excerpts
     }
-    |> URI.encode_query()
+
+    URI.encode_query(params)
   end
 end

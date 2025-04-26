@@ -1,10 +1,42 @@
-<div class="max-w-4xl mx-auto px-4 py-8">
+<div class="max-w-7xl mx-auto px-4 py-8">
   <.header>
     Documents
     <:subtitle>Select a document to view its excerpts</:subtitle>
   </.header>
 
   <div class="mt-8">
+    <div class="mb-6 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <%= if @page > 1 do %>
+          <.link
+            navigate={
+              ~p"/documents?#{build_query_params(@page - 1, @per_page, @sort_order, @has_excerpts)}"
+            }
+            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Previous
+          </.link>
+        <% end %>
+
+        <%= if @page * @per_page < @total_count do %>
+          <.link
+            navigate={
+              ~p"/documents?#{build_query_params(@page + 1, @per_page, @sort_order, @has_excerpts)}"
+            }
+            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Next
+          </.link>
+        <% end %>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <span class="text-sm text-gray-700">
+          Showing {(@page - 1) * @per_page + 1}-{min(@page * @per_page, @total_count)} of {@total_count}
+        </span>
+      </div>
+    </div>
+
     <div class="mb-6 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <div class="flex items-center space-x-2">
@@ -41,9 +73,17 @@
       </div>
 
       <div class="flex items-center space-x-2">
-        <span class="text-sm text-gray-700">
-          Showing {(@page - 1) * @per_page + 1}-{min(@page * @per_page, @total_count)} of {@total_count}
-        </span>
+        <span class="text-sm text-gray-700">Items per page:</span>
+        <select
+          name="per_page"
+          class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          phx-change="update_per_page"
+        >
+          <option value="10" selected={@per_page == 10}>10</option>
+          <option value="25" selected={@per_page == 25}>25</option>
+          <option value="50" selected={@per_page == 50}>50</option>
+          <option value="100" selected={@per_page == 100}>100</option>
+        </select>
       </div>
     </div>
 
@@ -103,46 +143,6 @@
           </div>
         </.link>
       <% end %>
-    </div>
-
-    <div class="mt-8 flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        <span class="text-sm text-gray-700">Items per page:</span>
-        <select
-          name="per_page"
-          class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          phx-change="update_per_page"
-        >
-          <option value="10" selected={@per_page == 10}>10</option>
-          <option value="25" selected={@per_page == 25}>25</option>
-          <option value="50" selected={@per_page == 50}>50</option>
-          <option value="100" selected={@per_page == 100}>100</option>
-        </select>
-      </div>
-
-      <div class="flex items-center space-x-2">
-        <%= if @page > 1 do %>
-          <.link
-            navigate={
-              ~p"/documents?#{build_query_params(@page - 1, @per_page, @sort_order, @has_excerpts)}"
-            }
-            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Previous
-          </.link>
-        <% end %>
-
-        <%= if @page * @per_page < @total_count do %>
-          <.link
-            navigate={
-              ~p"/documents?#{build_query_params(@page + 1, @per_page, @sort_order, @has_excerpts)}"
-            }
-            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Next
-          </.link>
-        <% end %>
-      </div>
     </div>
   </div>
 </div>
