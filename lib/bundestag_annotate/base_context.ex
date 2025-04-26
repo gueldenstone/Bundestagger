@@ -3,6 +3,8 @@ defmodule BundestagAnnotate.BaseContext do
   Base context module providing common functionality for all contexts.
   """
 
+  @type t :: struct()
+
   defmacro __using__(_) do
     quote do
       import Ecto.Query, warn: false

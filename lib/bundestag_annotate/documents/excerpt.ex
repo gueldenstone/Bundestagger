@@ -2,6 +2,21 @@ defmodule BundestagAnnotate.Documents.Excerpt do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @type t :: %__MODULE__{
+          excerpt_id: binary(),
+          sentence_before: String.t(),
+          sentence_with_keyword: String.t(),
+          sentence_after: String.t(),
+          keyword: String.t(),
+          document_id: binary(),
+          category_id: binary() | nil,
+          document: BundestagAnnotate.Documents.Document.t() | Ecto.Association.NotLoaded.t(),
+          category:
+            BundestagAnnotate.Documents.Category.t() | Ecto.Association.NotLoaded.t() | nil,
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
+
   @primary_key {:excerpt_id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "excerpts" do

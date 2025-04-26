@@ -5,58 +5,139 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
 
   use BundestagAnnotateWeb, :live_view
   alias BundestagAnnotate.{Documents, Categories}
+  alias BundestagAnnotate.Documents.{Document, Excerpt}
+  alias BundestagAnnotate.Documents.Category
   import BundestagAnnotateWeb.AnnotationComponents
+
+  @type socket :: Phoenix.LiveView.Socket.t()
+  @type params :: map()
 
   @impl true
   def mount(%{"id" => document_id}, _session, socket) do
-    case Documents.get_document(document_id) do
-      nil ->
+    with {:ok, document} <- load_document(document_id),
+         {:ok, excerpts} <- load_excerpts(document_id),
+         {:ok, categories} <- load_categories() do
+      {:ok, initialize_socket(socket, document, excerpts, categories)}
+    else
+      {:error, :not_found} ->
         {:ok,
          socket
          |> put_flash(:error, "Document not found")
          |> redirect(to: ~p"/documents")}
 
-      document ->
-        excerpts =
-          Documents.list_excerpts_by_document(document_id) |> Documents.preload_categories()
-
-        categories = Categories.list_categories()
-
-        # Create a map of excerpt IDs to their content for quick lookup
-        excerpt_map = Map.new(excerpts, fn excerpt -> {excerpt.excerpt_id, excerpt} end)
-
-        # Preload excerpts into the document
-        document = Map.put(document, :excerpts, excerpts)
-
+      {:error, reason} ->
         {:ok,
          socket
-         |> assign(:document, document)
-         |> assign(:excerpts, excerpts)
-         |> assign(:categories, categories)
-         |> assign(:open_dropdowns, %{})
-         |> assign(:show_new_category_modal, false)
-         |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})
-         |> assign(:all_categorized, all_excerpts_categorized?(excerpts))
-         |> assign(:document_content_expanded, false)
-         |> assign(:excerpt_map, excerpt_map)}
+         |> put_flash(:error, "Failed to load data: #{inspect(reason)}")
+         |> redirect(to: ~p"/documents")}
     end
   end
 
+  @spec load_document(String.t()) :: {:ok, Document.t()} | {:error, :not_found}
+  defp load_document(document_id) do
+    case Documents.get_document(document_id) do
+      nil -> {:error, :not_found}
+      document -> {:ok, document}
+    end
+  end
+
+  @spec load_excerpts(String.t()) :: {:ok, [Excerpt.t()]} | {:error, term()}
+  defp load_excerpts(document_id) do
+    try do
+      excerpts =
+        Documents.list_excerpts_by_document(document_id) |> Documents.preload_categories()
+
+      {:ok, excerpts}
+    rescue
+      e -> {:error, e}
+    end
+  end
+
+  @spec load_categories() :: {:ok, [Category.t()]} | {:error, term()}
+  defp load_categories() do
+    try do
+      categories = Categories.list_categories()
+      {:ok, categories}
+    rescue
+      e -> {:error, e}
+    end
+  end
+
+  @spec initialize_socket(socket(), Document.t(), [Excerpt.t()], [Category.t()]) :: socket()
+  defp initialize_socket(socket, document, excerpts, categories) do
+    excerpt_map = Map.new(excerpts, fn excerpt -> {excerpt.excerpt_id, excerpt} end)
+    document = Map.put(document, :excerpts, excerpts)
+
+    socket
+    |> assign(:document, document)
+    |> assign(:excerpts, excerpts)
+    |> assign(:categories, categories)
+    |> assign(:open_dropdowns, %{})
+    |> assign(:show_new_category_modal, false)
+    |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})
+    |> assign(:all_categorized, all_excerpts_categorized?(excerpts))
+    |> assign(:document_content_expanded, false)
+    |> assign(:excerpt_map, excerpt_map)
+  end
+
+  @spec all_excerpts_categorized?([Excerpt.t()]) :: boolean()
   defp all_excerpts_categorized?(excerpts) do
     Enum.all?(excerpts, & &1.category)
   end
 
+  @spec toggle_dropdown_state(map(), String.t()) :: map()
+  defp toggle_dropdown_state(dropdowns, excerpt_id) do
+    if dropdowns[excerpt_id] do
+      Map.delete(dropdowns, excerpt_id)
+    else
+      Map.put(dropdowns, excerpt_id, true)
+    end
+  end
+
+  @spec get_excerpt(String.t()) :: {:ok, Excerpt.t()} | {:error, :not_found}
+  defp get_excerpt(excerpt_id) do
+    case Documents.get_excerpt(excerpt_id) do
+      nil -> {:error, :not_found}
+      excerpt -> {:ok, excerpt}
+    end
+  end
+
+  @spec get_category(String.t()) :: {:ok, Category.t()} | {:error, :not_found}
+  defp get_category(category_id) do
+    case Categories.get_category(category_id) do
+      nil -> {:error, :not_found}
+      category -> {:ok, category}
+    end
+  end
+
+  @spec update_excerpt_category(Excerpt.t(), Category.t()) ::
+          {:ok, Excerpt.t()} | {:error, Ecto.Changeset.t()}
+  defp update_excerpt_category(excerpt, category) do
+    Documents.update_excerpt(excerpt, %{category_id: category.category_id})
+  end
+
+  @spec update_excerpts_list([Excerpt.t()], String.t(), Excerpt.t()) :: [Excerpt.t()]
+  defp update_excerpts_list(excerpts, excerpt_id, updated_excerpt) do
+    Enum.map(excerpts, fn e ->
+      if e.excerpt_id == excerpt_id, do: updated_excerpt, else: e
+    end)
+  end
+
+  @spec format_changeset_errors(Ecto.Changeset.t()) :: String.t()
+  defp format_changeset_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+    |> Enum.map_join(", ", fn {_field, errors} -> errors end)
+  end
+
+  # Group all handle_event/3 functions together
   @impl true
   def handle_event("toggle_dropdown", %{"excerpt-id" => excerpt_id}, socket) do
     current_dropdowns = socket.assigns.open_dropdowns
-
-    new_dropdowns =
-      if current_dropdowns[excerpt_id] do
-        Map.delete(current_dropdowns, excerpt_id)
-      else
-        Map.put(current_dropdowns, excerpt_id, true)
-      end
-
+    new_dropdowns = toggle_dropdown_state(current_dropdowns, excerpt_id)
     {:noreply, assign(socket, :open_dropdowns, new_dropdowns)}
   end
 
@@ -87,10 +168,13 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
          socket
          |> assign(:categories, [category | socket.assigns.categories])
          |> assign(:show_new_category_modal, false)
-         |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})}
+         |> assign(:new_category, %{name: "", description: "", color: "#3B82F6"})
+         |> put_flash(:info, "Category created successfully")}
 
-      {:error, _changeset} ->
-        {:noreply, socket}
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to create category: #{format_changeset_errors(changeset)}")}
     end
   end
 
@@ -100,26 +184,28 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
         %{"excerpt-id" => excerpt_id, "category-id" => category_id},
         socket
       ) do
-    excerpt = Documents.get_excerpt!(excerpt_id)
-    category = Categories.get_category!(category_id)
+    with {:ok, excerpt} <- get_excerpt(excerpt_id),
+         {:ok, category} <- get_category(category_id),
+         {:ok, updated_excerpt} <- update_excerpt_category(excerpt, category) do
+      updated_excerpt = Documents.preload_categories(updated_excerpt)
+      excerpts = update_excerpts_list(socket.assigns.excerpts, excerpt_id, updated_excerpt)
 
-    case Documents.update_excerpt(excerpt, %{category_id: category.category_id}) do
-      {:ok, updated_excerpt} ->
-        updated_excerpt = Documents.preload_categories(updated_excerpt)
-
-        excerpts =
-          Enum.map(socket.assigns.excerpts, fn e ->
-            if e.excerpt_id == excerpt_id, do: updated_excerpt, else: e
-          end)
-
+      {:noreply,
+       socket
+       |> assign(:excerpts, excerpts)
+       |> assign(:open_dropdowns, Map.delete(socket.assigns.open_dropdowns, excerpt_id))
+       |> assign(:all_categorized, all_excerpts_categorized?(excerpts))
+       |> put_flash(:info, "Category selected successfully")}
+    else
+      {:error, :not_found} ->
         {:noreply,
          socket
-         |> assign(:excerpts, excerpts)
-         |> assign(:open_dropdowns, Map.delete(socket.assigns.open_dropdowns, excerpt_id))
-         |> assign(:all_categorized, all_excerpts_categorized?(excerpts))}
+         |> put_flash(:error, "Failed to find excerpt or category")}
 
-      {:error, _changeset} ->
-        {:noreply, socket}
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to update excerpt: #{format_changeset_errors(changeset)}")}
     end
   end
 
@@ -131,20 +217,24 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
 
   @impl true
   def handle_event("jump_to_text", %{"excerpt-id" => excerpt_id}, socket) do
-    excerpt = socket.assigns.excerpt_map[excerpt_id]
+    case Map.fetch(socket.assigns.excerpt_map, excerpt_id) do
+      {:ok, excerpt} ->
+        socket = assign(socket, :document_content_expanded, true)
 
-    # First ensure the document content is expanded
-    socket = assign(socket, :document_content_expanded, true)
+        {:noreply,
+         socket
+         |> push_event("js-exec", %{
+           to: "#document-content",
+           attr: "data-excerpt-id",
+           val: excerpt_id,
+           content: excerpt.sentence_with_keyword
+         })}
 
-    # Push a JavaScript event to handle the scrolling
-    {:noreply,
-     socket
-     |> push_event("js-exec", %{
-       to: "#document-content",
-       attr: "data-excerpt-id",
-       val: excerpt_id,
-       content: excerpt.sentence_with_keyword
-     })}
+      :error ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to find excerpt")}
+    end
   end
 
   @impl true

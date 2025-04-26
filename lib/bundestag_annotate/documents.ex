@@ -10,11 +10,10 @@ defmodule BundestagAnnotate.Documents do
 
   # Document functions
   @doc """
-
   Returns a list of documents. When options are provided, returns a tuple with pagination info.
   """
   @spec list_documents() :: [Document.t()]
-  @spec list_documents(map()) :: {[Document.t()], integer()}
+  @spec list_documents(keyword() | map()) :: [Document.t()] | {[Document.t()], integer()}
   def list_documents(opts \\ []) do
     if opts == [] do
       Repo.all(Document)
@@ -25,8 +24,6 @@ defmodule BundestagAnnotate.Documents do
       sort_order = Keyword.get(opts, :sort_order, "desc")
       has_excerpts = Keyword.get(opts, :has_excerpts, true)
       offset = (page - 1) * per_page
-
-      IO.puts("list_documents - page: #{page}, per_page: #{per_page}, offset: #{offset}")
 
       # Base query
       base_query =
@@ -79,10 +76,6 @@ defmodule BundestagAnnotate.Documents do
         |> offset(^offset)
         |> Repo.all()
         |> Repo.preload(:excerpts)
-
-      # Log the first few dates to verify sorting
-      dates = Enum.map(documents, & &1.date)
-      IO.puts("First 3 dates: #{inspect(Enum.take(dates, 3))}")
 
       {documents, total_count}
     end
