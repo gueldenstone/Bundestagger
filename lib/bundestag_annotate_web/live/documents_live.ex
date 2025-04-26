@@ -29,14 +29,16 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
     sort_order = parsed_params["sort_order"] || socket.assigns[:sort_order] || "desc"
     has_excerpts = parsed_params["has_excerpts"] || socket.assigns[:has_excerpts] || "true"
 
+    # Update socket assigns
     socket =
       socket
       |> assign(:page, page)
       |> assign(:per_page, per_page)
       |> assign(:sort_order, sort_order)
       |> assign(:has_excerpts, has_excerpts)
+      |> assign_documents()
 
-    {:noreply, assign_documents(socket)}
+    {:noreply, socket}
   end
 
   defp parse_integer_param(nil, default), do: default
@@ -94,22 +96,34 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
 
   @impl true
   def handle_event("update_filter", %{"has_excerpts" => has_excerpts}, socket) do
+    socket =
+      socket
+      |> assign(:has_excerpts, has_excerpts)
+      |> assign(:page, 1)
+      |> assign_documents()
+
     {:noreply,
-     socket
-     |> assign(:has_excerpts, has_excerpts)
-     |> assign(:page, 1)
-     |> assign_documents()}
+     push_patch(socket,
+       to:
+         ~p"/documents?#{build_query_params(1, socket.assigns.per_page, socket.assigns.sort_order, has_excerpts)}"
+     )}
   end
 
   @impl true
   def handle_event("update_per_page", %{"per_page" => per_page}, socket) do
     case Integer.parse(per_page) do
       {int, _} ->
+        socket =
+          socket
+          |> assign(:per_page, int)
+          |> assign(:page, 1)
+          |> assign_documents()
+
         {:noreply,
-         socket
-         |> assign(:per_page, int)
-         |> assign(:page, 1)
-         |> assign_documents()}
+         push_patch(socket,
+           to:
+             ~p"/documents?#{build_query_params(1, int, socket.assigns.sort_order, socket.assigns.has_excerpts)}"
+         )}
 
       :error ->
         {:noreply, put_flash(socket, :error, "Invalid items per page value")}

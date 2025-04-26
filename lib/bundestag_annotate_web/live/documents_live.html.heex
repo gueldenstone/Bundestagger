@@ -9,7 +9,7 @@
       <div class="flex items-center space-x-2">
         <%= if @page > 1 do %>
           <.link
-            navigate={
+            patch={
               ~p"/documents?#{build_query_params(@page - 1, @per_page, @sort_order, @has_excerpts)}"
             }
             class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -20,7 +20,7 @@
 
         <%= if @page * @per_page < @total_count do %>
           <.link
-            navigate={
+            patch={
               ~p"/documents?#{build_query_params(@page + 1, @per_page, @sort_order, @has_excerpts)}"
             }
             class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -90,7 +90,9 @@
     <div class="space-y-4">
       <%= for document <- @documents do %>
         <.link
-          navigate={~p"/documents/#{document.document_id}"}
+          patch={
+            ~p"/documents/#{document.document_id}?#{build_query_params(@page, @per_page, @sort_order, @has_excerpts)}"
+          }
           class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
         >
           <div class="flex items-center justify-between">

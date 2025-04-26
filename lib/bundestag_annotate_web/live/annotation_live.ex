@@ -13,23 +13,26 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   @type params :: map()
 
   @impl true
-  def mount(%{"id" => document_id}, _session, socket) do
+  def mount(%{"id" => document_id} = params, _session, socket) do
+    # Extract state parameters from URL
+    state = Map.drop(params, ["id"])
+
     with {:ok, document} <- load_document(document_id),
          {:ok, excerpts} <- load_excerpts(document_id),
          {:ok, categories} <- load_categories() do
-      {:ok, initialize_socket(socket, document, excerpts, categories)}
+      {:ok, initialize_socket(socket, document, excerpts, categories, state)}
     else
       {:error, :not_found} ->
         {:ok,
          socket
          |> put_flash(:error, "Document not found")
-         |> redirect(to: ~p"/documents")}
+         |> push_patch(to: ~p"/documents?#{URI.encode_query(state)}")}
 
       {:error, reason} ->
         {:ok,
          socket
          |> put_flash(:error, "Failed to load data: #{inspect(reason)}")
-         |> redirect(to: ~p"/documents")}
+         |> push_patch(to: ~p"/documents?#{URI.encode_query(state)}")}
     end
   end
 
@@ -63,8 +66,9 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
     end
   end
 
-  @spec initialize_socket(socket(), Document.t(), [Excerpt.t()], [Category.t()]) :: socket()
-  defp initialize_socket(socket, document, excerpts, categories) do
+  @spec initialize_socket(socket(), Document.t(), [Excerpt.t()], [Category.t()], map()) ::
+          socket()
+  defp initialize_socket(socket, document, excerpts, categories, state) do
     excerpt_map = Map.new(excerpts, fn excerpt -> {excerpt.excerpt_id, excerpt} end)
     document = Map.put(document, :excerpts, excerpts)
 
@@ -78,6 +82,7 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
     |> assign(:all_categorized, all_excerpts_categorized?(excerpts))
     |> assign(:document_content_expanded, false)
     |> assign(:excerpt_map, excerpt_map)
+    |> assign(:state, state)
   end
 
   @spec all_excerpts_categorized?([Excerpt.t()]) :: boolean()
@@ -241,7 +246,7 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   def render(assigns) do
     ~H"""
     <div class="max-w-7xl mx-auto px-4 py-8">
-      <.back_button />
+      <.back_button state={@state} />
       <.document_title document={@document} all_categorized={@all_categorized} />
       <.excerpts_list excerpts={@excerpts} categories={@categories} open_dropdowns={@open_dropdowns} />
       <.document_content content={@document.content} is_expanded={@document_content_expanded} />
