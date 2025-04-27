@@ -8,6 +8,11 @@ defmodule BundestagAnnotate.Documents do
   import Ecto.Query
   alias BundestagAnnotate.Repo
 
+  # Cache key for the current page
+  @cache_key "documents_page"
+  # Cache TTL in milliseconds (5 minutes)
+  @cache_ttl :timer.minutes(60)
+
   # Document functions
   @doc """
   Returns a list of documents. When options are provided, returns a tuple with pagination info.
@@ -25,68 +30,99 @@ defmodule BundestagAnnotate.Documents do
       has_excerpts = Keyword.get(opts, :has_excerpts, true)
       offset = (page - 1) * per_page
 
-      # Base query for documents with excerpts
-      base_query =
-        from d in Document,
-          left_join: e in assoc(d, :excerpts)
+      # Try to get from cache first
+      cache_key = "#{@cache_key}_#{page}_#{per_page}_#{sort_order}_#{has_excerpts}"
 
-      # Apply sorting
-      base_query =
-        case sort_order do
-          "asc" ->
-            from [d, _] in base_query, order_by: [asc: d.date]
+      case Cachex.get(:documents_cache, cache_key) do
+        {:ok, nil} ->
+          # Cache miss, fetch from database
+          fetch_and_cache_documents(per_page, sort_order, has_excerpts, offset, cache_key)
 
-          "categorized" ->
-            from [d, e] in base_query,
-              group_by: d.document_id,
-              order_by: [desc: count(e.category_id)]
+        {:ok, result} ->
+          # Cache hit
+          result
 
-          "uncategorized" ->
-            from [d, e] in base_query,
-              group_by: d.document_id,
-              order_by: [asc: count(e.category_id)]
-
-          _ ->
-            from [d, _] in base_query, order_by: [desc: d.date]
-        end
-
-      # Get total count first
-      total_count_query =
-        if has_excerpts do
-          from [d, e] in base_query,
-            where: not is_nil(e.excerpt_id),
-            select: d.document_id
-        else
-          from [d, _] in base_query,
-            select: d.document_id
-        end
-
-      total_count =
-        total_count_query
-        |> Repo.all()
-        |> Enum.uniq()
-        |> length()
-
-      # Get paginated documents with their excerpts
-      documents_query =
-        if has_excerpts do
-          from [d, e] in base_query,
-            where: not is_nil(e.excerpt_id),
-            select: d
-        else
-          from [d, _] in base_query,
-            select: d
-        end
-
-      documents =
-        documents_query
-        |> limit(^per_page)
-        |> offset(^offset)
-        |> Repo.all()
-        |> Repo.preload(:excerpts)
-
-      {documents, total_count}
+        _ ->
+          # Cache error, fetch from database
+          fetch_and_cache_documents(per_page, sort_order, has_excerpts, offset, cache_key)
+      end
     end
+  end
+
+  defp fetch_and_cache_documents(per_page, sort_order, has_excerpts, offset, cache_key) do
+    # Base query for documents with excerpts
+    base_query =
+      from d in Document,
+        left_join: e in assoc(d, :excerpts)
+
+    # Apply sorting
+    base_query =
+      case sort_order do
+        "asc" ->
+          from [d, _] in base_query, order_by: [asc: d.date]
+
+        "categorized" ->
+          from [d, e] in base_query,
+            group_by: d.document_id,
+            order_by: [desc: count(e.category_id)]
+
+        "uncategorized" ->
+          from [d, e] in base_query,
+            group_by: d.document_id,
+            order_by: [asc: count(e.category_id)]
+
+        _ ->
+          from [d, _] in base_query, order_by: [desc: d.date]
+      end
+
+    # Get total count first
+    total_count_query =
+      if has_excerpts do
+        from [d, e] in base_query,
+          where: not is_nil(e.excerpt_id),
+          select: d.document_id
+      else
+        from [d, _] in base_query,
+          select: d.document_id
+      end
+
+    total_count =
+      total_count_query
+      |> Repo.all()
+      |> Enum.uniq()
+      |> length()
+
+    # Get paginated documents with their excerpts
+    documents_query =
+      if has_excerpts do
+        from [d, e] in base_query,
+          where: not is_nil(e.excerpt_id),
+          select: d
+      else
+        from [d, _] in base_query,
+          select: d
+      end
+
+    documents =
+      documents_query
+      |> limit(^per_page)
+      |> offset(^offset)
+      |> Repo.all()
+      |> Repo.preload(:excerpts)
+
+    result = {documents, total_count}
+
+    # Cache the result with TTL
+    Cachex.put(:documents_cache, cache_key, result, ttl: @cache_ttl)
+
+    result
+  end
+
+  @doc """
+  Clears the documents cache. Call this when documents are updated or deleted.
+  """
+  def clear_documents_cache do
+    Cachex.clear(:documents_cache)
   end
 
   @doc """

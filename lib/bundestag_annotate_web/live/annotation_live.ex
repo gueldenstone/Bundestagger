@@ -194,6 +194,9 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
       updated_excerpt = Documents.preload_categories(updated_excerpt)
       excerpts = update_excerpts_list(socket.assigns.excerpts, excerpt_id, updated_excerpt)
 
+      # Clear the documents cache since we updated an excerpt's category
+      Documents.clear_documents_cache()
+
       {:noreply,
        socket
        |> assign(:excerpts, excerpts)

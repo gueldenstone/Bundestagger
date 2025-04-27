@@ -35,7 +35,12 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
   def document_title(assigns) do
     ~H"""
     <div class="flex items-center gap-4 mb-8">
-      <h1 class="text-3xl font-bold">{@document.title}</h1>
+      <div>
+        <h1 class="text-3xl font-bold">{@document.title}</h1>
+        <p class="mt-2 text-sm text-zinc-600">
+          {Calendar.strftime(@document.date, "%B %d, %Y")}
+        </p>
+      </div>
       <%= if @all_categorized do %>
         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           <svg

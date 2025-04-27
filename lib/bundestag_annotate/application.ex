@@ -17,6 +17,8 @@ defmodule BundestagAnnotate.Application do
       {Phoenix.PubSub, name: BundestagAnnotate.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: BundestagAnnotate.Finch},
+      # Start Cachex for document caching
+      {Cachex, name: :documents_cache},
       # Start a worker by calling: BundestagAnnotate.Worker.start_link(arg)
       # {BundestagAnnotate.Worker, arg},
       # Start to serve requests, typically the last entry
