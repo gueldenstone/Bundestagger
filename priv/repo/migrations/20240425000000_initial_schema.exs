@@ -21,6 +21,11 @@ defmodule BundestagAnnotate.Repo.Migrations.InitialSchema do
       add :date, :date, null: false
       add :title, :string, null: false
       add :content, :text, null: false
+      add :pdf_url, :string, null: false
+      add :document_number, :string, null: true
+      add :document_type, :string, null: true
+      add :election_period, :string, null: true
+      add :publisher, :string, null: true
 
       timestamps()
     end
@@ -33,6 +38,8 @@ defmodule BundestagAnnotate.Repo.Migrations.InitialSchema do
       add :sentence_before, :text
       add :sentence_with_keyword, :text, null: false
       add :sentence_after, :text
+      add :keyword, :string, null: false
+      add :is_duplicate, :boolean, null: false, default: false
 
       timestamps()
     end

@@ -194,8 +194,12 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
       updated_excerpt = Documents.preload_categories(updated_excerpt)
       excerpts = update_excerpts_list(socket.assigns.excerpts, excerpt_id, updated_excerpt)
 
-      # Clear the documents cache since we updated an excerpt's category
-      Documents.clear_documents_cache()
+      # Clear the documents cache only if the category was added or removed
+      if (is_nil(excerpt.category_id) and category_id != "") or
+           (not is_nil(excerpt.category_id) and category_id == "") do
+        IO.puts("Clearing documents cache")
+        Documents.clear_documents_cache()
+      end
 
       {:noreply,
        socket

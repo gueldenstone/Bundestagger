@@ -13,6 +13,11 @@ defmodule BundestagAnnotate.Documents.Document do
           content: String.t() | nil,
           date: Date.t() | nil,
           excerpts: [BundestagAnnotate.Documents.Excerpt.t()] | Ecto.Association.NotLoaded,
+          pdf_url: String.t() | nil,
+          document_number: String.t() | nil,
+          document_type: String.t() | nil,
+          election_period: String.t() | nil,
+          publisher: String.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -23,6 +28,11 @@ defmodule BundestagAnnotate.Documents.Document do
     field :date, :date
     field :title, :string
     field :content, :string
+    field :pdf_url, :string
+    field :document_number, :string
+    field :document_type, :string
+    field :election_period, :string
+    field :publisher, :string
 
     has_many :excerpts, BundestagAnnotate.Documents.Excerpt,
       foreign_key: :document_id,

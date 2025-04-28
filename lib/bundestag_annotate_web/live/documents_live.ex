@@ -9,7 +9,12 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
       |> assign(:page, 1)
       |> assign(:per_page, 10)
       |> assign(:sort_order, "desc")
-      |> assign(:has_excerpts, "true")
+      |> assign(:has_excerpts, true)
+      |> assign(:document_type, "all")
+      |> assign(:publisher, "all")
+      |> assign(:loading, true)
+      |> assign(:document_types, [])
+      |> assign(:publishers, [])
       |> assign(:documents, [])
       |> assign(:total_count, 0)
 
@@ -37,7 +42,9 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
     page = parse_integer_param(parsed_params["page"], 1)
     per_page = parse_integer_param(parsed_params["per_page"], 10)
     sort_order = parsed_params["sort_order"] || "desc"
-    has_excerpts = parsed_params["has_excerpts"] || "true"
+    has_excerpts = parsed_params["has_excerpts"] == "true"
+    document_type = parsed_params["document_type"] || "all"
+    publisher = parsed_params["publisher"] || "all"
 
     # Update socket assigns
     socket =
@@ -46,6 +53,9 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
       |> assign(:per_page, per_page)
       |> assign(:sort_order, sort_order)
       |> assign(:has_excerpts, has_excerpts)
+      |> assign(:document_type, document_type)
+      |> assign(:publisher, publisher)
+      |> assign(:loading, true)
       |> assign_documents()
 
     {:noreply, socket}
@@ -66,76 +76,175 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
       page: page,
       per_page: per_page,
       sort_order: sort_order,
-      has_excerpts: has_excerpts
+      has_excerpts: has_excerpts,
+      document_type: document_type,
+      publisher: publisher
     } = socket.assigns
 
-    case Documents.list_documents(
-           page: page,
-           per_page: per_page,
-           sort_order: sort_order,
-           has_excerpts: has_excerpts == "true"
-         ) do
-      {documents, total_count} ->
-        assign(socket,
-          documents: documents,
-          total_count: total_count
-        )
+    # First, load document types and publishers
+    socket =
+      socket
+      |> assign(:document_types, Documents.get_document_types())
+      |> assign(:publishers, Documents.get_publishers())
 
-      _ ->
-        socket
-        |> put_flash(:error, "Failed to load documents")
-        |> assign(documents: [], total_count: 0)
+    # Then load documents
+    case {document_type, publisher} do
+      {"all", "all"} ->
+        case Documents.list_documents(
+               page: page,
+               per_page: per_page,
+               sort_order: sort_order,
+               has_excerpts: has_excerpts
+             ) do
+          {documents, total_count} ->
+            assign(socket,
+              documents: documents,
+              total_count: total_count,
+              loading: false
+            )
+
+          _ ->
+            socket
+            |> put_flash(:error, "Failed to load documents")
+            |> assign(documents: [], total_count: 0, loading: false)
+        end
+
+      {type, "all"} ->
+        case Documents.list_documents_by_type(
+               type,
+               page: page,
+               per_page: per_page,
+               sort_order: sort_order,
+               has_excerpts: has_excerpts
+             ) do
+          {documents, total_count} ->
+            assign(socket,
+              documents: documents,
+              total_count: total_count,
+              loading: false
+            )
+
+          _ ->
+            socket
+            |> put_flash(:error, "Failed to load documents")
+            |> assign(documents: [], total_count: 0, loading: false)
+        end
+
+      {"all", pub} ->
+        case Documents.list_documents_by_publisher(
+               pub,
+               page: page,
+               per_page: per_page,
+               sort_order: sort_order,
+               has_excerpts: has_excerpts
+             ) do
+          {documents, total_count} ->
+            assign(socket,
+              documents: documents,
+              total_count: total_count,
+              loading: false
+            )
+
+          _ ->
+            socket
+            |> put_flash(:error, "Failed to load documents")
+            |> assign(documents: [], total_count: 0, loading: false)
+        end
+
+      {type, pub} ->
+        case Documents.list_documents_by_publisher(
+               pub,
+               page: page,
+               per_page: per_page,
+               sort_order: sort_order,
+               has_excerpts: has_excerpts,
+               document_type: type
+             ) do
+          {documents, total_count} ->
+            assign(socket,
+              documents: documents,
+              total_count: total_count,
+              loading: false
+            )
+
+          _ ->
+            socket
+            |> put_flash(:error, "Failed to load documents")
+            |> assign(documents: [], total_count: 0, loading: false)
+        end
     end
   end
 
   @impl true
-  def handle_event("update_sort", %{"value" => new_sort_order}, socket) do
-    # Update the socket assigns first
-    socket = assign(socket, :sort_order, new_sort_order)
+  def handle_event("update_sort_order", %{"value" => new_sort_order}, socket) do
+    socket =
+      socket
+      |> assign(:sort_order, new_sort_order)
+      |> assign(:page, 1)
+      |> assign(:loading, true)
+      |> assign(:documents, [])
 
-    # Then update the documents with the new sort order
-    socket = assign_documents(socket)
+    Process.send_after(self(), :load_documents, 0)
 
-    # Finally, push the patch to update the URL
-    {:noreply,
-     push_patch(socket,
-       to:
-         ~p"/documents?#{build_query_params(socket.assigns.page, socket.assigns.per_page, new_sort_order, socket.assigns.has_excerpts)}"
-     )}
+    {:noreply, socket}
   end
 
   @impl true
-  def handle_event("update_filter", %{"value" => has_excerpts}, socket) do
+  def handle_event("update_has_excerpts", %{"value" => has_excerpts}, socket) do
     socket =
       socket
-      |> assign(:has_excerpts, has_excerpts)
+      |> assign(:has_excerpts, has_excerpts == "true")
       |> assign(:page, 1)
-      |> assign_documents()
+      |> assign(:loading, true)
+      |> assign(:documents, [])
 
-    {:noreply,
-     push_patch(socket,
-       to:
-         ~p"/documents?#{build_query_params(1, socket.assigns.per_page, socket.assigns.sort_order, has_excerpts)}"
-     )}
+    Process.send_after(self(), :load_documents, 0)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("update_document_type", %{"value" => document_type}, socket) do
+    socket =
+      socket
+      |> assign(:document_type, document_type)
+      |> assign(:page, 1)
+      |> assign(:loading, true)
+      |> assign(:documents, [])
+
+    Process.send_after(self(), :load_documents, 0)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("update_publisher", %{"value" => publisher}, socket) do
+    socket =
+      socket
+      |> assign(:publisher, publisher)
+      |> assign(:page, 1)
+      |> assign(:loading, true)
+      |> assign(:documents, [])
+
+    Process.send_after(self(), :load_documents, 0)
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_event("update_per_page", %{"value" => per_page}, socket) do
     case Integer.parse(per_page) do
       {int, _} ->
-        # Update the socket assigns first
-        socket = assign(socket, :per_page, int)
-        socket = assign(socket, :page, 1)
+        socket =
+          socket
+          |> assign(:per_page, int)
+          |> assign(:page, 1)
+          |> assign(:loading, true)
+          |> assign(:documents, [])
 
-        # Then update the documents with the new per_page
-        socket = assign_documents(socket)
+        Process.send_after(self(), :load_documents, 0)
 
-        # Finally, push the patch to update the URL
-        {:noreply,
-         push_patch(socket,
-           to:
-             ~p"/documents?#{build_query_params(1, int, socket.assigns.sort_order, socket.assigns.has_excerpts)}"
-         )}
+        {:noreply, socket}
 
       :error ->
         {:noreply, put_flash(socket, :error, "Invalid items per page value")}
@@ -143,33 +252,38 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
   end
 
   @impl true
-  def handle_event("change_page", %{"page" => page}, socket) do
+  def handle_event("update_page", %{"page" => page}, socket) do
     case Integer.parse(page) do
       {int, _} ->
-        # Update the socket assigns first
-        socket = assign(socket, :page, int)
+        socket =
+          socket
+          |> assign(:page, int)
+          |> assign(:loading, true)
+          |> assign(:documents, [])
 
-        # Then update the documents with the new page
-        socket = assign_documents(socket)
+        Process.send_after(self(), :load_documents, 0)
 
-        # Finally, push the patch to update the URL
-        {:noreply,
-         push_patch(socket,
-           to:
-             ~p"/documents?#{build_query_params(int, socket.assigns.per_page, socket.assigns.sort_order, socket.assigns.has_excerpts)}"
-         )}
+        {:noreply, socket}
 
       :error ->
         {:noreply, put_flash(socket, :error, "Invalid page number")}
     end
   end
 
-  defp build_query_params(page, per_page, sort_order, has_excerpts) do
+  @impl true
+  def handle_info(:load_documents, socket) do
+    socket = assign_documents(socket)
+    {:noreply, socket}
+  end
+
+  defp build_query_params(page, per_page, sort_order, has_excerpts, document_type, publisher) do
     params = %{
       "page" => to_string(page),
       "per_page" => to_string(per_page),
       "sort_order" => sort_order,
-      "has_excerpts" => has_excerpts
+      "has_excerpts" => to_string(has_excerpts),
+      "document_type" => document_type,
+      "publisher" => publisher
     }
 
     # Remove any empty values and encode the query

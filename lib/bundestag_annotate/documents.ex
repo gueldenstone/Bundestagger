@@ -28,15 +28,26 @@ defmodule BundestagAnnotate.Documents do
       per_page = Keyword.get(opts, :per_page, 10)
       sort_order = Keyword.get(opts, :sort_order, "desc")
       has_excerpts = Keyword.get(opts, :has_excerpts, true)
+      document_type = Keyword.get(opts, :document_type, "all")
+      publisher = Keyword.get(opts, :publisher, "all")
       offset = (page - 1) * per_page
 
       # Try to get from cache first
-      cache_key = "#{@cache_key}_#{page}_#{per_page}_#{sort_order}_#{has_excerpts}"
+      cache_key =
+        "#{@cache_key}_#{page}_#{per_page}_#{sort_order}_#{has_excerpts}_#{document_type}_#{publisher}"
 
       case Cachex.get(:documents_cache, cache_key) do
         {:ok, nil} ->
           # Cache miss, fetch from database
-          fetch_and_cache_documents(per_page, sort_order, has_excerpts, offset, cache_key)
+          fetch_and_cache_documents(
+            per_page,
+            sort_order,
+            has_excerpts,
+            document_type,
+            publisher,
+            offset,
+            cache_key
+          )
 
         {:ok, result} ->
           # Cache hit
@@ -44,71 +55,39 @@ defmodule BundestagAnnotate.Documents do
 
         _ ->
           # Cache error, fetch from database
-          fetch_and_cache_documents(per_page, sort_order, has_excerpts, offset, cache_key)
+          fetch_and_cache_documents(
+            per_page,
+            sort_order,
+            has_excerpts,
+            document_type,
+            publisher,
+            offset,
+            cache_key
+          )
       end
     end
   end
 
-  defp fetch_and_cache_documents(per_page, sort_order, has_excerpts, offset, cache_key) do
-    # Base query for documents with excerpts
-    base_query =
-      from d in Document,
-        left_join: e in assoc(d, :excerpts)
+  defp fetch_and_cache_documents(
+         per_page,
+         sort_order,
+         has_excerpts,
+         document_type,
+         publisher,
+         offset,
+         cache_key
+       ) do
+    # Build base query with all filters
+    base_query = build_base_query(document_type, publisher)
 
     # Apply sorting
-    base_query =
-      case sort_order do
-        "asc" ->
-          from [d, _] in base_query, order_by: [asc: d.date]
+    base_query = apply_sorting(base_query, sort_order)
 
-        "categorized" ->
-          from [d, e] in base_query,
-            group_by: d.document_id,
-            order_by: [desc: count(e.category_id)]
+    # Get total count
+    total_count = get_total_count(base_query, has_excerpts)
 
-        "uncategorized" ->
-          from [d, e] in base_query,
-            group_by: d.document_id,
-            order_by: [asc: count(e.category_id)]
-
-        _ ->
-          from [d, _] in base_query, order_by: [desc: d.date]
-      end
-
-    # Get total count first
-    total_count_query =
-      if has_excerpts do
-        from [d, e] in base_query,
-          where: not is_nil(e.excerpt_id),
-          select: d.document_id
-      else
-        from [d, _] in base_query,
-          select: d.document_id
-      end
-
-    total_count =
-      total_count_query
-      |> Repo.all()
-      |> Enum.uniq()
-      |> length()
-
-    # Get paginated documents with their excerpts
-    documents_query =
-      if has_excerpts do
-        from [d, e] in base_query,
-          where: not is_nil(e.excerpt_id),
-          select: d
-      else
-        from [d, _] in base_query,
-          select: d
-      end
-
-    documents =
-      documents_query
-      |> limit(^per_page)
-      |> offset(^offset)
-      |> Repo.all()
-      |> Repo.preload(:excerpts)
+    # Get paginated documents
+    documents = get_paginated_documents(base_query, has_excerpts, per_page, offset)
 
     result = {documents, total_count}
 
@@ -116,6 +95,85 @@ defmodule BundestagAnnotate.Documents do
     Cachex.put(:documents_cache, cache_key, result, ttl: @cache_ttl)
 
     result
+  end
+
+  defp build_base_query(document_type, publisher) do
+    from d in Document,
+      left_join: e in assoc(d, :excerpts),
+      where: ^build_where_clause(document_type, publisher)
+  end
+
+  defp build_where_clause(document_type, publisher) do
+    dynamic([d], true)
+    |> maybe_filter_document_type(document_type)
+    |> maybe_filter_publisher(publisher)
+  end
+
+  defp maybe_filter_document_type(dynamic, "all"), do: dynamic
+
+  defp maybe_filter_document_type(dynamic, document_type) do
+    dynamic([d], ^dynamic and d.document_type == ^document_type)
+  end
+
+  defp maybe_filter_publisher(dynamic, "all"), do: dynamic
+
+  defp maybe_filter_publisher(dynamic, publisher) do
+    dynamic([d], ^dynamic and d.publisher == ^publisher)
+  end
+
+  defp apply_sorting(query, sort_order) do
+    case sort_order do
+      "asc" ->
+        from [d, _] in query, order_by: [asc: d.date]
+
+      "categorized" ->
+        from [d, e] in query,
+          group_by: d.document_id,
+          order_by: [desc: count(e.category_id)]
+
+      "uncategorized" ->
+        from [d, e] in query,
+          group_by: d.document_id,
+          order_by: [asc: count(e.category_id)]
+
+      _ ->
+        from [d, _] in query, order_by: [desc: d.date]
+    end
+  end
+
+  defp get_total_count(query, has_excerpts) do
+    total_count_query =
+      if has_excerpts do
+        from [d, e] in query,
+          where: not is_nil(e.excerpt_id),
+          select: d.document_id
+      else
+        from [d, _] in query,
+          select: d.document_id
+      end
+
+    total_count_query
+    |> Repo.all()
+    |> Enum.uniq()
+    |> length()
+  end
+
+  defp get_paginated_documents(query, has_excerpts, per_page, offset) do
+    documents_query =
+      if has_excerpts do
+        from [d, e] in query,
+          where: not is_nil(e.excerpt_id),
+          select: d
+      else
+        from [d, _] in query,
+          select: d
+      end
+
+    documents_query
+    |> limit(^per_page)
+    |> offset(^offset)
+    |> Repo.all()
+    |> Repo.preload(:excerpts)
   end
 
   @doc """
@@ -245,5 +303,47 @@ defmodule BundestagAnnotate.Documents do
 
   def preload_categories(excerpt) do
     Repo.preload(excerpt, :category)
+  end
+
+  @doc """
+  Returns a list of all unique document types.
+  """
+  @spec get_document_types() :: [String.t()]
+  def get_document_types do
+    from(d in Document,
+      select: d.document_type,
+      order_by: d.document_type
+    )
+    |> Repo.all()
+    |> Enum.uniq()
+  end
+
+  @doc """
+  Returns a list of all unique publishers.
+  """
+  @spec get_publishers() :: [String.t()]
+  def get_publishers do
+    from(d in Document,
+      select: d.publisher,
+      order_by: d.publisher
+    )
+    |> Repo.all()
+    |> Enum.uniq()
+  end
+
+  @doc """
+  Returns a list of documents filtered by document type.
+  """
+  @spec list_documents_by_type(String.t(), keyword() | map()) :: {[Document.t()], integer()}
+  def list_documents_by_type(document_type, opts \\ []) do
+    list_documents([document_type: document_type] ++ opts)
+  end
+
+  @doc """
+  Returns a list of documents filtered by publisher.
+  """
+  @spec list_documents_by_publisher(String.t(), keyword() | map()) :: {[Document.t()], integer()}
+  def list_documents_by_publisher(publisher, opts \\ []) do
+    list_documents([publisher: publisher] ++ opts)
   end
 end
