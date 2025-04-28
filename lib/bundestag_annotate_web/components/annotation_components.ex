@@ -40,6 +40,17 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
         <p class="mt-2 text-sm text-zinc-600">
           {Calendar.strftime(@document.date, "%B %d, %Y")}
         </p>
+        <%= if @document.pdf_url do %>
+          <p class="mt-2">
+            <.link
+              href={@document.pdf_url}
+              target="_blank"
+              class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline"
+            >
+              View PDF
+            </.link>
+          </p>
+        <% end %>
       </div>
       <%= if @all_categorized do %>
         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

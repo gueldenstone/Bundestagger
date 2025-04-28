@@ -142,7 +142,8 @@ defmodule BundestagAnnotate.Documents do
   end
 
   defp get_total_count(query, has_excerpts) do
-    total_count_query =
+    # Get all unique document IDs that match our filters
+    document_ids_query =
       if has_excerpts do
         from [d, e] in query,
           where: not is_nil(e.excerpt_id),
@@ -152,26 +153,40 @@ defmodule BundestagAnnotate.Documents do
           select: d.document_id
       end
 
-    total_count_query
+    # Count unique document IDs
+    document_ids_query
     |> Repo.all()
     |> Enum.uniq()
     |> length()
   end
 
   defp get_paginated_documents(query, has_excerpts, per_page, offset) do
-    documents_query =
+    # First get all unique document IDs that match our filters
+    document_ids_query =
       if has_excerpts do
         from [d, e] in query,
           where: not is_nil(e.excerpt_id),
-          select: d
+          select: d.document_id,
+          order_by: [desc: d.date]
       else
         from [d, _] in query,
-          select: d
+          select: d.document_id,
+          order_by: [desc: d.date]
       end
 
-    documents_query
-    |> limit(^per_page)
-    |> offset(^offset)
+    # Get all matching document IDs and apply pagination
+    all_document_ids =
+      document_ids_query
+      |> Repo.all()
+      |> Enum.uniq()
+      |> Enum.drop(offset)
+      |> Enum.take(per_page)
+
+    # Then fetch the full documents with their excerpts
+    from(d in Document,
+      where: d.document_id in ^all_document_ids,
+      order_by: [desc: d.date]
+    )
     |> Repo.all()
     |> Repo.preload(:excerpts)
   end
