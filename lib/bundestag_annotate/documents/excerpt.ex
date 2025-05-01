@@ -10,6 +10,7 @@ defmodule BundestagAnnotate.Documents.Excerpt do
           keyword: String.t(),
           document_id: binary(),
           category_id: binary() | nil,
+          is_duplicate: boolean(),
           document: BundestagAnnotate.Documents.Document.t() | Ecto.Association.NotLoaded.t(),
           category:
             BundestagAnnotate.Documents.Category.t() | Ecto.Association.NotLoaded.t() | nil,
@@ -24,6 +25,7 @@ defmodule BundestagAnnotate.Documents.Excerpt do
     field :sentence_with_keyword, :string
     field :sentence_after, :string
     field :keyword, :string
+    field :is_duplicate, :boolean, default: false
 
     belongs_to :document, BundestagAnnotate.Documents.Document,
       foreign_key: :document_id,
@@ -47,7 +49,8 @@ defmodule BundestagAnnotate.Documents.Excerpt do
       :sentence_after,
       :keyword,
       :document_id,
-      :category_id
+      :category_id,
+      :is_duplicate
     ])
     |> validate_required([:sentence_with_keyword, :document_id, :keyword])
     |> foreign_key_constraint(:document_id)

@@ -137,6 +137,12 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
     |> Enum.map_join(", ", fn {_field, errors} -> errors end)
   end
 
+  @spec update_excerpt_duplicate(Excerpt.t(), boolean()) ::
+          {:ok, Excerpt.t()} | {:error, Ecto.Changeset.t()}
+  defp update_excerpt_duplicate(excerpt, is_duplicate) do
+    Documents.update_excerpt(excerpt, %{is_duplicate: is_duplicate})
+  end
+
   # Group all handle_event/3 functions together
   @impl true
   def handle_event("toggle_dropdown", %{"excerpt-id" => excerpt_id}, socket) do
@@ -212,6 +218,30 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
         {:noreply,
          socket
          |> put_flash(:error, "Failed to find excerpt or category")}
+
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to update excerpt: #{format_changeset_errors(changeset)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_duplicate", %{"excerpt-id" => excerpt_id}, socket) do
+    with {:ok, excerpt} <- get_excerpt(excerpt_id),
+         {:ok, updated_excerpt} <- update_excerpt_duplicate(excerpt, not excerpt.is_duplicate) do
+      updated_excerpt = Documents.preload_categories(updated_excerpt)
+      excerpts = update_excerpts_list(socket.assigns.excerpts, excerpt_id, updated_excerpt)
+
+      {:noreply,
+       socket
+       |> assign(:excerpts, excerpts)
+       |> put_flash(:info, "Duplicate status updated successfully")}
+    else
+      {:error, :not_found} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to find excerpt")}
 
       {:error, changeset} ->
         {:noreply,
