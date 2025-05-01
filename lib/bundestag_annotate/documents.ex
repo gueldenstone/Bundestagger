@@ -166,12 +166,10 @@ defmodule BundestagAnnotate.Documents do
       if has_excerpts do
         from [d, e] in query,
           where: not is_nil(e.excerpt_id),
-          select: d.document_id,
-          order_by: [desc: d.date]
+          select: d.document_id
       else
         from [d, _] in query,
-          select: d.document_id,
-          order_by: [desc: d.date]
+          select: d.document_id
       end
 
     # Get all matching document IDs and apply pagination
@@ -184,8 +182,7 @@ defmodule BundestagAnnotate.Documents do
 
     # Then fetch the full documents with their excerpts
     from(d in Document,
-      where: d.document_id in ^all_document_ids,
-      order_by: [desc: d.date]
+      where: d.document_id in ^all_document_ids
     )
     |> Repo.all()
     |> Repo.preload(:excerpts)
