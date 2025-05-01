@@ -15,8 +15,6 @@ defmodule BundestagAnnotate.Application do
       {DNSCluster,
        query: Application.get_env(:bundestag_annotate, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: BundestagAnnotate.PubSub},
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: BundestagAnnotate.Finch},
       # Start Cachex for document caching
       {Cachex, name: :documents_cache},
       # Start a worker by calling: BundestagAnnotate.Worker.start_link(arg)

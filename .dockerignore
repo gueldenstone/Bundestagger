@@ -1,0 +1,74 @@
+# Dependencies
+deps/
+_build/
+*.ez
+
+# Runtime files
+*.log
+*.dump
+*.pid
+
+# Environment files
+.env
+.env.*
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+test/
+*.test
+*.spec
+
+# Documentation
+doc/
+*.md
+LICENSE
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Data directory
+data/
+
+# Misc
+.github/
+*.iml
+
+# Documentation
+README.md
+CHANGELOG.md
+
+# Local development
+!.env.example
+
+# Database
+*.db
+*.db-*
+*.sqlite3
+
+# Logs
+logs/
+
+# Temporary files
+*~ 
+
+.direnv/
+.nix-hex/
+.nix-mix/
+.tmp/
+.elixir_ls/

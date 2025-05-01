@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - MIX_ENV=prod
+      - PHX_SERVER=true
+      - PORT=4000
+      - DATABASE_PATH=/app/data/bundestag_annotate.db
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  db:
+    image: sqlite:latest
+    volumes:
+      - ./data:/data
+    command:
+      ["/bin/sh", "-c", "mkdir -p /data && touch /data/bundestag_annotate.db"]

@@ -17,12 +17,6 @@ config :bundestag_annotate, BundestagAnnotateWeb.Endpoint,
   secret_key_base: "xPOiy+uaF6IYx+ntj7baIpWMij3LPJ8EFp8jMSgSN2ipapA38diODzH12n+TyqVl",
   server: false
 
-# In test we don't send emails
-config :bundestag_annotate, BundestagAnnotate.Mailer, adapter: Swoosh.Adapters.Test
-
-# Disable swoosh api client as it is only required for production adapters
-config :swoosh, :api_client, false
-
 # Print only warnings and errors during test
 config :logger, level: :warning
 
