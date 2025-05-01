@@ -108,11 +108,11 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
     <div class="bg-white rounded-lg shadow p-6">
       <div class="flex items-start justify-between">
         <div class="flex items-center gap-2">
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-          {@excerpt.keyword}
-        </span>
-        <.excerpt_category excerpt={@excerpt} />
-      </div>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+            {@excerpt.keyword}
+          </span>
+          <.excerpt_category excerpt={@excerpt} />
+        </div>
         <div class="flex items-center gap-1">
           <input
             type="checkbox"
@@ -287,7 +287,7 @@ defmodule BundestagAnnotateWeb.AnnotationComponents do
                       id="category-color"
                       name="category-color"
                       value={@category.color}
-                      phx-change="update_new_category"
+                      phx-blur="update_new_category"
                       phx-value-field="color"
                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     />
