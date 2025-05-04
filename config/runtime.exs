@@ -30,8 +30,14 @@ if config_env() == :prod do
 
   config :bundestag_annotate, BundestagAnnotate.Repo,
     database: database_path,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "2"),
-    timeout: 60_000
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    timeout: 60_000,
+    busy_timeout: 5000,
+    journal_mode: :wal,
+    synchronous: :normal,
+    # 2GB cache
+    cache_size: -2000,
+    temp_store: :memory
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you

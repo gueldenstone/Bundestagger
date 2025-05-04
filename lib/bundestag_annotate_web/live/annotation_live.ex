@@ -8,6 +8,7 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
   alias BundestagAnnotate.Documents.{Document, Excerpt}
   alias BundestagAnnotate.Documents.Category
   import BundestagAnnotateWeb.AnnotationComponents
+  require Logger
 
   @type socket :: Phoenix.LiveView.Socket.t()
   @type params :: map()
@@ -203,7 +204,7 @@ defmodule BundestagAnnotateWeb.AnnotationLive do
       # Clear the documents cache only if the category was added or removed
       if (is_nil(excerpt.category_id) and category_id != "") or
            (not is_nil(excerpt.category_id) and category_id == "") do
-        IO.puts("Clearing documents cache")
+        Logger.warning("Clearing documents cache")
         Documents.clear_documents_cache()
       end
 

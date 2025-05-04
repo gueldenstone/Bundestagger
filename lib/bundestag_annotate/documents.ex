@@ -11,7 +11,9 @@ defmodule BundestagAnnotate.Documents do
   # Cache key for the current page
   @cache_key "documents_page"
   # Cache TTL in milliseconds (5 minutes)
-  @cache_ttl :timer.minutes(60)
+  @cache_ttl :timer.minutes(5)
+  # Cache TTL for document types and publishers (1 hour)
+  @metadata_cache_ttl :timer.hours(1)
 
   # Document functions
   @doc """
@@ -189,10 +191,76 @@ defmodule BundestagAnnotate.Documents do
   end
 
   @doc """
+  Returns a list of all unique document types.
+  """
+  @spec get_document_types() :: [String.t()]
+  def get_document_types do
+    case Cachex.get(:documents_cache, "document_types") do
+      {:ok, nil} ->
+        types =
+          from(d in Document,
+            select: d.document_type,
+            order_by: d.document_type
+          )
+          |> Repo.all()
+          |> Enum.uniq()
+
+        Cachex.put(:documents_cache, "document_types", types, ttl: @metadata_cache_ttl)
+        types
+
+      {:ok, types} ->
+        types
+
+      _ ->
+        from(d in Document,
+          select: d.document_type,
+          order_by: d.document_type
+        )
+        |> Repo.all()
+        |> Enum.uniq()
+    end
+  end
+
+  @doc """
+  Returns a list of all unique publishers.
+  """
+  @spec get_publishers() :: [String.t()]
+  def get_publishers do
+    case Cachex.get(:documents_cache, "publishers") do
+      {:ok, nil} ->
+        publishers =
+          from(d in Document,
+            select: d.publisher,
+            order_by: d.publisher
+          )
+          |> Repo.all()
+          |> Enum.uniq()
+
+        Cachex.put(:documents_cache, "publishers", publishers, ttl: @metadata_cache_ttl)
+        publishers
+
+      {:ok, publishers} ->
+        publishers
+
+      _ ->
+        from(d in Document,
+          select: d.publisher,
+          order_by: d.publisher
+        )
+        |> Repo.all()
+        |> Enum.uniq()
+    end
+  end
+
+  @doc """
   Clears the documents cache. Call this when documents are updated or deleted.
   """
   def clear_documents_cache do
-    Cachex.clear(:documents_cache)
+    # Only clear the document list cache, keep metadata cache
+    Cachex.clear(:documents_cache, fn
+      {key, _} -> String.starts_with?(key, @cache_key)
+      _ -> false
+    end)
   end
 
   @doc """
@@ -315,32 +383,6 @@ defmodule BundestagAnnotate.Documents do
 
   def preload_categories(excerpt) do
     Repo.preload(excerpt, :category)
-  end
-
-  @doc """
-  Returns a list of all unique document types.
-  """
-  @spec get_document_types() :: [String.t()]
-  def get_document_types do
-    from(d in Document,
-      select: d.document_type,
-      order_by: d.document_type
-    )
-    |> Repo.all()
-    |> Enum.uniq()
-  end
-
-  @doc """
-  Returns a list of all unique publishers.
-  """
-  @spec get_publishers() :: [String.t()]
-  def get_publishers do
-    from(d in Document,
-      select: d.publisher,
-      order_by: d.publisher
-    )
-    |> Repo.all()
-    |> Enum.uniq()
   end
 
   @doc """
