@@ -256,11 +256,8 @@ defmodule BundestagAnnotate.Documents do
   Clears the documents cache. Call this when documents are updated or deleted.
   """
   def clear_documents_cache do
-    # Only clear the document list cache, keep metadata cache
-    Cachex.clear(:documents_cache, fn
-      {key, _} -> String.starts_with?(key, @cache_key)
-      _ -> false
-    end)
+    # Clear all entries in the cache
+    Cachex.clear(:documents_cache)
   end
 
   @doc """
