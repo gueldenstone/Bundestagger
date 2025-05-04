@@ -42,7 +42,14 @@ defmodule BundestagAnnotateWeb.DocumentsLive do
     page = parse_integer_param(parsed_params["page"], 1)
     per_page = parse_integer_param(parsed_params["per_page"], 10)
     sort_order = parsed_params["sort_order"] || "desc"
-    has_excerpts = parsed_params["has_excerpts"] == "true"
+
+    has_excerpts =
+      if parsed_params["has_excerpts"] do
+        parsed_params["has_excerpts"] == "true"
+      else
+        true
+      end
+
     document_type = parsed_params["document_type"] || "all"
     publisher = parsed_params["publisher"] || "all"
 
