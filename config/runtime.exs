@@ -51,7 +51,7 @@ if config_env() == :prod do
   config :bundestag_annotate, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :bundestag_annotate, BundestagAnnotateWeb.Endpoint,
-    url: [host: host, port: port],
+    url: [host: host, port: port, scheme: "https"],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
