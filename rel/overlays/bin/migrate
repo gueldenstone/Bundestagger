@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+exec ./bundestag_annotate eval BundestagAnnotate.Release.migrate
